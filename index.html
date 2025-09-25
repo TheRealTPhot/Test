@@ -4,17 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sống Cân Bằng</title>
-    <!-- Firebase Config (replace with your real config) -->
+    <!-- Firebase Config (set these from your Firebase project) -->
     <script>
       window.__firebase_config = JSON.stringify({
-        apiKey: "AIzaSyB4H3voSw2fKb47Ld1Z-I709AulW3xB9Qk",
-        authDomain: "khkt-mxh.firebaseapp.com",
-        projectId: "khkt-mxh",
-        storageBucket: "khkt-mxh.appspot.com",
-        messagingSenderId: "980320589729",
-        appId: "1:980320589729:web:205fe73141f192233edde0",
-        measurementId: "G-FYQDN7YSHV"
+        apiKey: "...",
+        authDomain: "...",
+        projectId: "...",
+        // etc.
       });
+      window.__app_id = "YOUR_APP_ID";
     </script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -83,6 +81,7 @@
             font-size: 1.25rem;
         }
     </style>
+    <!-- Main JS as module -->
     <script type="module" src="main.js"></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -95,10 +94,12 @@
             </svg>
             <p class="text-gray-600">Đang tải dữ liệu...</p>
         </div>
+        <!-- Main content (hidden by default, shown after loading) -->
         <div id="main-content" class="hidden">
             <h1 class="text-4xl font-bold text-center mb-2 text-indigo-800">Sống Cân Bằng</h1>
             <p class="text-center text-gray-500 mb-6">Chào mừng bạn trở lại, bạn đang trên con đường xây dựng thói quen tốt!</p>
             <p class="text-center text-xs text-gray-400 mb-6">ID Người Dùng: <span id="user-id-display" class="font-mono"></span></p>
+            <!-- Usage Dashboard Section -->
             <div class="gradient-bg text-white rounded-xl p-6 shadow-lg mb-8">
                 <div class="flex items-center justify-between mb-4">
                     <p class="text-lg font-semibold">Tổng thời gian sử dụng hôm nay:</p>
@@ -116,12 +117,14 @@
                     <button id="set-limit-btn" class="w-full md:w-auto flex-1 bg-white text-indigo-700 px-6 py-2 rounded-lg font-semibold shadow-md hover:bg-indigo-100 transition duration-300">Đặt giới hạn</button>
                 </div>
             </div>
+            <!-- Manual Usage Input Section -->
             <div class="bg-gray-50 rounded-xl p-6 mb-8 shadow-md">
                 <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Nhập Thời gian Sử dụng</h3>
                 <p class="text-sm text-gray-500 mb-4">Nhập thời gian sử dụng (phút) cho từng ứng dụng hôm nay.</p>
                 <div id="app-input-container" class="space-y-3"></div>
                 <button id="submit-usage-btn" class="w-full bg-indigo-500 text-white px-6 py-2 rounded-lg font-semibold mt-6 hover:bg-indigo-600 transition duration-300">Cập Nhật Thời Gian Sử Dụng</button>
             </div>
+            <!-- Charts Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-gray-50 rounded-xl p-6 shadow-md">
                     <h3 class="text-2xl font-semibold text-center mb-4 text-indigo-800">Sử Dụng Theo Ứng Dụng</h3>
@@ -132,6 +135,7 @@
                     <canvas id="weekly-usage-chart"></canvas>
                 </div>
             </div>
+            <!-- Health & Well-being Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-gray-50 rounded-xl p-6 shadow-md">
                     <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Hoạt Động Lành Mạnh</h3>
@@ -143,6 +147,7 @@
                         <button id="add-activity-btn" class="w-full md:w-auto bg-indigo-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-600 transition duration-300">Thêm</button>
                     </div>
                 </div>
+                <!-- Pomodoro Timer -->
                 <div class="bg-gray-50 rounded-xl p-6 shadow-md">
                     <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Hẹn Giờ Pomodoro</h3>
                     <div class="flex flex-col items-center justify-center space-y-4">
@@ -154,6 +159,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- Wellness Quiz -->
                 <div class="bg-gray-50 rounded-xl p-6 shadow-md col-span-1 md:col-span-2">
                     <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Bài Kiểm Tra Sức Khỏe</h3>
                     <p class="text-sm text-gray-500 mb-2 font-bold">Trả lời trung thực tình trạng của bạn trong 2 tuần gần đây nhất.</p>
@@ -189,6 +195,7 @@
                     </div>
                 </div>
             </div>
+            <!-- Badges Section -->
             <div class="bg-gray-50 rounded-xl p-6 shadow-md mb-8">
                 <h3 class="text-2xl font-semibold text-center mb-4 text-indigo-800">Thành Tựu Của Bạn</h3>
                 <div id="badges-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
