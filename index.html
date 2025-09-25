@@ -2,44 +2,935 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Trang chủ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sống Cân Bằng</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #fff8f0; 
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .container {
+            max-width: 960px;
+        }
+        .gradient-bg {
+            background-image: linear-gradient(to right, #4c51bf, #6b46c1);
+        }
+        .badge-icon {
+            filter: grayscale(100%);
+            transition: filter 0.3s ease-in-out;
+        }
+        .badge-earned {
+            filter: none;
+        }
+        .app-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+        }
+        .notification-card {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            animation: slideIn 0.5s forwards, fadeOut 0.5s 4.5s forwards;
+        }
+        @keyframes slideIn {
+            from { top: -100px; opacity: 0; }
+            to { top: 20px; opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .input-group {
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            flex-direction: column;
+            gap: 12px;
+            padding: 8px 0;
         }
-        h1 {
-            color: #d6336c;
-            margin-bottom: 30px;
-            font-size: 32px;
-        }
-        a.button {
-            display: inline-block;
-            text-decoration: none;
-            background: linear-gradient(90deg, #ffd6e0, #fff2b2);
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 20px;
-            color: #333;
-            font-weight: bold;
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.25);
-            transition: transform 0.2s ease, background 0.3s ease;
-        }
-        a.button:hover {
-            transform: scale(1.1);
-            background: linear-gradient(90deg, #ffb3c6, #ffe066);
+        .app-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.25rem;
         }
     </style>
 </head>
-<body>
-    <h1>Xin chào 👋</h1>
-    <a href="https://therealtphot.github.io/Test/about.html" class="button">Vào trang web</a>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="bg-white rounded-3xl shadow-2xl p-6 md:p-10 w-full container">
+        <!-- Loading spinner -->
+        <div id="loading-spinner" class="flex flex-col items-center justify-center space-y-4">
+            <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-gray-600">Đang tải dữ liệu...</p>
+        </div>
+
+        <div id="main-content" class="hidden">
+            <h1 class="text-4xl font-bold text-center mb-2 text-indigo-800">Sống Cân Bằng</h1>
+            <p class="text-center text-gray-500 mb-6">Chào mừng bạn trở lại, bạn đang trên con đường xây dựng thói quen tốt!</p>
+            <p class="text-center text-xs text-gray-400 mb-6">ID Người Dùng: <span id="user-id-display" class="font-mono"></span></p>
+
+            <!-- Usage Dashboard Section -->
+            <div class="gradient-bg text-white rounded-xl p-6 shadow-lg mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="text-lg font-semibold">Tổng thời gian sử dụng hôm nay:</p>
+                    <div class="text-4xl font-bold" id="current-usage-display">0p</div>
+                </div>
+                <div class="w-full bg-indigo-700 rounded-full h-2.5">
+                    <div class="bg-white h-2.5 rounded-full" id="progress-bar" style="width: 0%"></div>
+                </div>
+                <p class="mt-2 text-sm text-center" id="limit-message">Bạn chưa thiết lập giới hạn nào.</p>
+                <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mt-6">
+                    <div class="flex-1">
+                        <label for="limit-input" class="block text-sm font-medium mb-1">Đặt giới hạn hàng ngày (phút):</label>
+                        <input type="number" id="limit-input" placeholder="Ví dụ: 60" class="w-full rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    </div>
+                    <button id="set-limit-btn" class="w-full md:w-auto flex-1 bg-white text-indigo-700 px-6 py-2 rounded-lg font-semibold shadow-md hover:bg-indigo-100 transition duration-300">Đặt Giới Hạn</button>
+                </div>
+            </div>
+
+            <!-- Manual Usage Input Section -->
+            <div class="bg-gray-50 rounded-xl p-6 mb-8 shadow-md">
+                <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Nhập Thời gian Sử dụng</h3>
+                <p class="text-sm text-gray-500 mb-4">Nhập thời gian sử dụng (phút) cho từng ứng dụng hôm nay.</p>
+                <div id="app-input-container" class="space-y-3">
+                    <!-- App input fields will be populated here -->
+                </div>
+                <button id="submit-usage-btn" class="w-full bg-indigo-500 text-white px-6 py-2 rounded-lg font-semibold mt-6 hover:bg-indigo-600 transition duration-300">Cập Nhật Thời Gian Sử Dụng</button>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- Line Chart -->
+                <div class="bg-gray-50 rounded-xl p-6 shadow-md">
+                    <h3 class="text-2xl font-semibold text-center mb-4 text-indigo-800">Sử Dụng Theo Ứng Dụng</h3>
+                    <canvas id="app-usage-chart"></canvas>
+                </div>
+                <!-- Bar Chart -->
+                <div class="bg-gray-50 rounded-xl p-6 shadow-md">
+                    <h3 class="text-2xl font-semibold text-center mb-4 text-indigo-800">Tổng Sử Dụng Hàng Tuần</h3>
+                    <canvas id="weekly-usage-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Health & Well-being Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- Healthy Activities -->
+                <div class="bg-gray-50 rounded-xl p-6 shadow-md">
+                    <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Hoạt Động Lành Mạnh</h3>
+                    <p class="text-sm text-gray-500 mb-2">Các hoạt động phải được thực hiện một cách liền mạch, không bị gián đoạn bởi mạng xã hội.</p>
+                    <p class="text-sm text-gray-500 mb-4">Đánh dấu hoàn thành để theo dõi sự tiến bộ!</p>
+                    <div id="healthy-activities-list" class="space-y-3">
+                        <!-- Activities will be populated here -->
+                    </div>
+                    <div class="mt-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+                        <input type="text" id="new-activity-input" placeholder="Thêm hoạt động mới..." class="w-full rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <button id="add-activity-btn" class="w-full md:w-auto bg-indigo-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-600 transition duration-300">Thêm</button>
+                    </div>
+                </div>
+
+                <!-- Pomodoro Timer -->
+                <div class="bg-gray-50 rounded-xl p-6 shadow-md">
+                    <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Hẹn Giờ Pomodoro</h3>
+                    <div class="flex flex-col items-center justify-center space-y-4">
+                        <div class="text-6xl font-bold text-indigo-600" id="timer-display">25:00</div>
+                        <p class="text-lg font-medium text-gray-600" id="timer-status">Sẵn sàng bắt đầu!</p>
+                        <div class="flex space-x-4">
+                            <button id="start-pause-btn" class="bg-green-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-600 transition duration-300">Bắt Đầu</button>
+                            <button id="reset-btn" class="bg-red-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-600 transition duration-300 hidden">Đặt Lại</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wellness Quiz -->
+                <div class="bg-gray-50 rounded-xl p-6 shadow-md col-span-1 md:col-span-2">
+                    <h3 class="text-2xl font-semibold mb-4 text-indigo-800">Bài Kiểm Tra Sức Khỏe</h3>
+                    <p class="text-sm text-gray-500 mb-2 font-bold">Trả lời trung thực tình trạng của bạn trong 2 tuần gần đây nhất.</p>
+                    <p class="text-sm text-gray-500 mb-4">Bạn được khuyến khích làm bài kiểm tra này 2 tuần 1 lần.</p>
+                    <div id="quiz-content" class="space-y-4">
+                        <div id="physical-questions" class="space-y-4 hidden">
+                            <p class="font-bold text-lg">Sức khỏe thể chất</p>
+                        </div>
+                        <div id="mental-questions" class="space-y-4 hidden">
+                            <p class="font-bold text-lg">Sức khỏe tinh thần</p>
+                        </div>
+                        <div id="concentration-questions" class="space-y-4 hidden">
+                            <p class="font-bold text-lg">Mức độ tập trung</p>
+                        </div>
+                        <p id="quiz-status" class="text-center font-semibold text-sm"></p>
+                    </div>
+                    <button id="start-quiz-btn" class="w-full bg-indigo-500 text-white px-6 py-2 rounded-lg font-semibold mt-6 hover:bg-indigo-600 transition duration-300">Bắt Đầu Bài Kiểm Tra</button>
+                    <button id="submit-quiz-btn" class="w-full bg-green-500 text-white px-6 py-2 rounded-lg font-semibold mt-6 hover:bg-green-600 transition duration-300 hidden">Xem Kết Quả</button>
+                    <div id="quiz-result-section" class="mt-4 hidden">
+                        <h4 class="font-bold text-center text-lg text-indigo-800">Kết quả của bạn</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h5 class="text-center font-semibold text-gray-700">Điểm số hiện tại</h5>
+                                <canvas id="quiz-chart"></canvas>
+                            </div>
+                            <div>
+                                <h5 class="text-center font-semibold text-gray-700">Lịch sử kết quả</h5>
+                                <canvas id="quiz-history-chart"></canvas>
+                            </div>
+                        </div>
+                        <p id="dependency-score" class="mt-4 font-bold"></p>
+                        <div id="quiz-evaluation" class="mt-2 text-gray-700 space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badges Section -->
+            <div class="bg-gray-50 rounded-xl p-6 shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-center mb-4 text-indigo-800">Thành Tựu Của Bạn</h3>
+                <div id="badges-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Badges will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, updateDoc, getDocs, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set Firebase debug level
+        setLogLevel('debug');
+
+        const app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+
+        let userId = null;
+        let appUsageChart, weeklyUsageChart, quizChart, quizHistoryChart;
+        const initialLimit = 60;
+        let userData = {
+            limit: initialLimit,
+            weeklyData: Array(7).fill(0),
+            appUsage: {},
+            badges: {},
+            completedActivities: {},
+            customActivities: [],
+            loginStreak: 0,
+            underLimitStreak: 0,
+            learningStreak: 0,
+            readingStreak: 0,
+            exerciseStreak: 0,
+            quizScores: { physical: 0, mental: 0, concentration: 0 },
+            quizHistory: [],
+            lastLoginDate: null,
+            lastActivityDate: null
+        };
+
+        const todayIndex = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+        const socialApps = [
+            { id: 'facebook', name: 'Facebook', color: '#1877f2', iconClass: 'fa-brands fa-facebook' },
+            { id: 'instagram', name: 'Instagram', color: '#E4405F', iconClass: 'fa-brands fa-instagram' },
+            { id: 'tiktok', name: 'TikTok', color: '#000000', iconClass: 'fa-brands fa-tiktok' },
+            { id: 'twitter', name: 'Twitter', color: '#1DA1F2', iconClass: 'fa-brands fa-x-twitter' },
+            { id: 'threads', name: 'Threads', color: '#000000', iconClass: 'fa-brands fa-threads' },
+            { id: 'youtube', name: 'YouTube', color: '#FF0000', iconClass: 'fa-brands fa-youtube' },
+        ];
+
+        const defaultHealthyActivities = [
+            { id: 'reading', name: 'Đọc sách 30 phút' },
+            { id: 'exercise', name: 'Tập thể dục 15 phút' },
+            { id: 'learning', name: 'Học tập 60 phút' },
+            { id: 'music', name: 'Thư giãn với âm nhạc 10 phút' },
+            { id: 'conversation', name: 'Trò chuyện trực tiếp' },
+            { id: 'pre_sleep_tech_free', name: 'Không sử dụng điện thoại 30 phút trước khi ngủ' },
+            { id: 'post_wake_tech_free', name: 'Không sử dụng mạng xã hội ngay khi vừa ngủ dậy' }
+        ];
+        
+        const allBadges = [
+            { id: 'first_day', name: 'Ngày đầu tiên', description: 'Đăng nhập vào ứng dụng', icon: '☀️' },
+            { id: 'under_limit_1', name: 'Kiểm soát tốt', description: 'Giữ thời gian dưới giới hạn trong 1 ngày', icon: '✅' },
+            { id: 'under_limit_5', name: 'Chuỗi 5 ngày', description: 'Giữ thời gian dưới giới hạn trong 5 ngày liên tiếp', icon: '🏅' },
+            { id: 'under_limit_10', name: 'Chuyên gia kỷ luật', description: 'Giữ thời gian dưới giới hạn trong 10 ngày liên tiếp', icon: '🥇' },
+            { id: 'under_limit_20', name: 'Thống trị', description: 'Giữ thời gian dưới giới hạn trong 20 ngày liên tiếp', icon: '👑' },
+            { id: 'first_activity', name: 'Hoạt động đầu tiên', description: 'Hoàn thành hoạt động lành mạnh đầu tiên', icon: '🌱' },
+            { id: 'all_activities', name: 'Toàn năng', description: 'Hoàn thành tất cả hoạt động lành mạnh trong một ngày', icon: '🌟' },
+            { id: 'quiz_pro', name: 'Chuyên gia sức khỏe', description: 'Hoàn thành bài kiểm tra sức khỏe', icon: '🧠' },
+            { id: 'dependency_low_50', name: 'Tự chủ số', description: 'Đạt điểm phụ thuộc mạng xã hội dưới 50%', icon: '⚖️' },
+            { id: 'dependency_low_40', name: 'Giải phóng', description: 'Đạt điểm phụ thuộc mạng xã hội dưới 40%', icon: '🕊️' },
+            { id: 'dependency_low_30', name: 'Chủ nhân cuộc sống', description: 'Đạt điểm phụ thuộc mạng xã hội dưới 30%', icon: '🔮' },
+            { id: 'login_streak_5', name: 'Kiên trì 5', description: 'Đăng nhập 5 ngày liên tiếp', icon: '🔥' },
+            { id: 'login_streak_10', name: 'Kiên trì 10', description: 'Đăng nhập 10 ngày liên tiếp', icon: '⚡' },
+            { id: 'login_streak_20', name: 'Kiên trì 20', description: 'Đăng nhập 20 ngày liên tiếp', icon: '🚀' },
+            { id: 'learning_streak_5', name: 'Chuỗi học tập 5', description: 'Hoàn thành hoạt động học tập 5 ngày liên tiếp', icon: '📖' },
+            { id: 'learning_streak_10', name: 'Chuỗi học tập 10', description: 'Hoàn thành hoạt động học tập 10 ngày liên tiếp', icon: '🎓' },
+            { id: 'reading_streak_5', name: 'Chuỗi đọc sách 5', description: 'Hoàn thành hoạt động đọc sách 5 ngày liên tiếp', icon: '📕' },
+            { id: 'reading_streak_10', name: 'Chuỗi đọc sách 10', description: 'Hoàn thành hoạt động đọc sách 10 ngày liên tiếp', icon: '📚' },
+            { id: 'exercise_streak_5', name: 'Chuỗi tập thể dục 5', description: 'Hoàn thành hoạt động tập thể dục 5 ngày liên tiếp', icon: '💪' },
+            { id: 'exercise_streak_10', name: 'Chuỗi tập thể dục 10', description: 'Hoàn thành hoạt động tập thể dục 10 ngày liên tiếp', icon: '🏋️' },
+            { id: 'custom_activity', name: 'Sáng tạo', description: 'Thêm một hoạt động lành mạnh của riêng bạn', icon: '🎨' },
+        ];
+
+        const quizQuestions = {
+            physical: [
+                { q: "Bạn có thường xuyên cảm thấy đau đầu, mỏi mắt, hoặc đau cổ, vai, gáy không?", score: [1, 2, 3, 4, 5] },
+                { q: "Giấc ngủ của bạn có bị gián đoạn hoặc khó ngủ do sử dụng thiết bị điện tử không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có thường xuyên cảm thấy cơ thể mệt mỏi, uể oải ngay cả khi không làm việc nặng nhọc không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có cảm thấy khó khăn khi rời khỏi màn hình để tham gia các hoạt động thể chất không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có thường xuyên có những bữa ăn qua loa để tiếp tục lướt mạng không?", score: [1, 2, 3, 4, 5] },
+            ],
+            mental: [
+                { q: "Bạn có thường xuyên cảm thấy lo lắng, căng thẳng hoặc dễ cáu gắt không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có cảm thấy áp lực phải thể hiện một hình ảnh hoàn hảo trên mạng không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có cảm thấy buồn bã hoặc trống rỗng khi không được lướt mạng không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có cảm thấy lo sợ mình sẽ bỏ lỡ các xu hướng, tin tức trên mạng xã hội không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có thấy mình dễ dàng so sánh bản thân với người khác trên mạng xã hội không?", score: [1, 2, 3, 4, 5] },
+            ],
+            concentration: [
+                { q: "Bạn có dễ bị xao nhãng bởi điện thoại khi đang làm việc/học tập không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có kiểm tra điện thoại ngay khi nhận được thông báo không?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có cảm thấy khó khăn khi phải tập trung vào một cuộc trò chuyện trực tiếp?", score: [1, 2, 3, 4, 5] },
+                { q: "Bạn có thể hoàn thành một nhiệm vụ mà không bị gián đoạn không?", score: [5, 4, 3, 2, 1] },
+                { q: "Bạn có thể đọc một cuốn sách mà không cần phải cầm điện thoại không?", score: [5, 4, 3, 2, 1] },
+            ],
+        };
+        const quizOptions = ["Không bao giờ", "Hiếm khi", "Thỉnh thoảng", "Thường xuyên", "Luôn luôn"];
+
+        // Pomodoro Timer Variables
+        const pomodoro = {
+            workDuration: 25 * 60, // 25 minutes in seconds
+            breakDuration: 5 * 60, // 5 minutes in seconds
+            timer: null,
+            isWorkTime: true,
+            isRunning: false,
+            timeRemaining: 0,
+            intervalId: null
+        };
+        const timerDisplay = document.getElementById('timer-display');
+        const timerStatus = document.getElementById('timer-status');
+        const startPauseBtn = document.getElementById('start-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // DOM elements
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const mainContent = document.getElementById('main-content');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const currentUsageDisplay = document.getElementById('current-usage-display');
+        const limitInput = document.getElementById('limit-input');
+        const setLimitBtn = document.getElementById('set-limit-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const limitMessage = document.getElementById('limit-message');
+        const appInputContainer = document.getElementById('app-input-container');
+        const submitUsageBtn = document.getElementById('submit-usage-btn');
+        const appUsageChartCtx = document.getElementById('app-usage-chart').getContext('2d');
+        const weeklyUsageChartCtx = document.getElementById('weekly-usage-chart').getContext('2d');
+        const healthyActivitiesList = document.getElementById('healthy-activities-list');
+        const addActivityBtn = document.getElementById('add-activity-btn');
+        const newActivityInput = document.getElementById('new-activity-input');
+        const badgesGrid = document.getElementById('badges-grid');
+        const startQuizBtn = document.getElementById('start-quiz-btn');
+        const submitQuizBtn = document.getElementById('submit-quiz-btn');
+        const quizContent = document.getElementById('quiz-content');
+        const quizStatus = document.getElementById('quiz-status');
+        const quizResultSection = document.getElementById('quiz-result-section');
+        const quizEvaluation = document.getElementById('quiz-evaluation');
+        const dependencyScoreDisplay = document.getElementById('dependency-score');
+        const quizChartCtx = document.getElementById('quiz-chart').getContext('2d');
+        const quizHistoryChartCtx = document.getElementById('quiz-history-chart').getContext('2d');
+
+        // Functions
+        const getUserDocRef = () => {
+            return doc(db, `artifacts/${app_id}/users/${userId}/usage_data`, 'user_data');
+        };
+        
+        const showNotification = (title, message) => {
+            const notification = document.createElement('div');
+            notification.className = 'notification-card bg-white p-4 rounded-xl shadow-lg flex items-center space-x-3 w-full max-w-sm';
+            notification.innerHTML = `
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856a2 2 0 001.912-2.316L17.726 5.86a2 2 0 00-1.912-1.684H8.186a2 2 0 00-1.912 1.684L4.02 17.684A2 2 0 006.012 20h11.976z" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="font-bold text-gray-900">${title}</div>
+                    <div class="text-sm text-gray-600">${message}</div>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        };
+
+        const updateUI = () => {
+            if (!userData) return;
+
+            // Update dashboard
+            const totalUsageToday = userData.weeklyData[todayIndex] || 0;
+            currentUsageDisplay.textContent = `${totalUsageToday}p`;
+            const limit = userData.limit || initialLimit;
+            limitInput.value = limit;
+            limitMessage.innerHTML = `Giới hạn: <strong>${limit}p</strong>`;
+
+            const percentage = Math.min((totalUsageToday / limit) * 100, 100);
+            progressBar.style.width = `${percentage}%`;
+
+            if (totalUsageToday >= limit) {
+                limitMessage.innerHTML = `<span class="font-bold text-red-300">Bạn đã vượt quá giới hạn!</span>`;
+            } else if (totalUsageToday > 0) {
+                limitMessage.innerHTML = `Còn lại: <strong>${Math.max(0, limit - totalUsageToday)}p</strong>`;
+            }
+
+            // Update app usage inputs
+            const allApps = socialApps.concat(userData.customApps || []);
+            appInputContainer.innerHTML = allApps.map(app => `
+                <div class="input-group">
+                    <div class="app-icon" style="background-color: ${app.color || '#ccc'}">
+                        <i class="${app.iconClass || 'fa-solid fa-plus'}"></i>
+                    </div>
+                    <input type="number" id="input-${app.id}" placeholder="${app.name} (phút)" value="${(userData.appUsage[app.id] && userData.appUsage[app.id][todayIndex]) || 0}" class="flex-grow rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+            `).join('');
+
+            // Update activities
+            const allActivities = defaultHealthyActivities.concat(userData.customActivities || []);
+            healthyActivitiesList.innerHTML = allActivities.map(activity => `
+                <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                    <p class="text-gray-700">${activity.name}</p>
+                    <button id="activity-${activity.id}" data-id="${activity.id}" class="complete-activity-btn px-4 py-1 rounded-full text-sm font-semibold transition duration-300
+                        ${userData.completedActivities[activity.id] ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-indigo-200 text-indigo-700 hover:bg-indigo-300'}">
+                        ${userData.completedActivities[activity.id] ? 'Đã Xong' : 'Hoàn Thành'}
+                    </button>
+                </div>
+            `).join('');
+
+            // Update badges
+            badgesGrid.innerHTML = allBadges.map(badge => `
+                <div class="flex flex-col items-center space-y-2 p-3 rounded-xl bg-white shadow-sm transition-all transform hover:scale-105">
+                    <span class="text-4xl ${userData.badges[badge.id] ? 'badge-earned' : 'badge-icon'}">${badge.icon}</span>
+                    <p class="font-semibold text-center text-sm">${badge.name}</p>
+                    <p class="text-xs text-center text-gray-500">${badge.description}</p>
+                </div>
+            `).join('');
+            
+            // Update charts
+            updateCharts();
+        };
+
+        const updateCharts = () => {
+            const appLabels = socialApps.map(app => app.name);
+            const appColors = socialApps.map(app => app.color);
+            const appData = socialApps.map(app => (userData.appUsage[app.id] || Array(7).fill(0)));
+
+            const datasets = appData.map((data, index) => ({
+                label: appLabels[index],
+                data: data,
+                borderColor: appColors[index],
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 5
+            }));
+
+            // Line chart for individual app usage
+            if (appUsageChart) appUsageChart.destroy();
+            appUsageChart = new Chart(appUsageChartCtx, {
+                type: 'line',
+                data: {
+                    labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'CN', 'T7'].sort(),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Bar chart for total weekly usage
+            if (weeklyUsageChart) weeklyUsageChart.destroy();
+            const limitData = Array(7).fill(userData.limit || initialLimit);
+            weeklyUsageChart = new Chart(weeklyUsageChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'CN', 'T7'].sort(),
+                    datasets: [
+                        {
+                            label: 'Thời gian sử dụng',
+                            data: userData.weeklyData,
+                            backgroundColor: '#6366f1',
+                        },
+                        {
+                            label: 'Giới hạn',
+                            data: limitData,
+                            type: 'line',
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true },
+                        x: { stacked: false }
+                    }
+                }
+            });
+            
+            if (quizHistoryChart) quizHistoryChart.destroy();
+            const historyLabels = userData.quizHistory.map((entry, index) => `Lần ${index + 1}`);
+            const physicalData = userData.quizHistory.map(entry => entry.scores.physical);
+            const mentalData = userData.quizHistory.map(entry => entry.scores.mental);
+            const concentrationData = userData.quizHistory.map(entry => entry.scores.concentration);
+
+            quizHistoryChart = new Chart(quizHistoryChartCtx, {
+                type: 'line',
+                data: {
+                    labels: historyLabels,
+                    datasets: [
+                        { label: 'Thể chất', data: physicalData, borderColor: '#4c51bf', fill: false, tension: 0.4 },
+                        { label: 'Tinh thần', data: mentalData, borderColor: '#6b46c1', fill: false, tension: 0.4 },
+                        { label: 'Tập trung', data: concentrationData, borderColor: '#f56565', fill: false, tension: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, suggestedMax: 25 } }
+                }
+            });
+        };
+        
+        const saveData = async () => {
+            try {
+                await setDoc(getUserDocRef(), userData);
+            } catch (error) {
+                console.error("Error saving data:", error);
+            }
+        };
+
+        const awardBadge = async (badgeId) => {
+            if (!userData.badges[badgeId]) {
+                const userDocRef = getUserDocRef();
+                userData.badges[badgeId] = true;
+                await updateDoc(userDocRef, { [`badges.${badgeId}`]: true });
+                showNotification("Thành Tựu Mới!", `Bạn đã nhận được huy hiệu "${allBadges.find(b => b.id === badgeId).name}"!`);
+            }
+        };
+
+        const initApp = () => {
+            loadingSpinner.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+            userIdDisplay.textContent = userId;
+            updateUI();
+        };
+
+        const getQuizResultEvaluation = (scores) => {
+            const { physical, mental, concentration } = scores;
+            const dependencyScore = ((physical * 0.4) + (mental * 0.4) + (concentration * 0.2)) / 5;
+            const dependencyPercentage = (dependencyScore / 5) * 100;
+            const formattedPercentage = dependencyPercentage.toFixed(2);
+            
+            let evaluationDetails = `
+                <p><strong>Điểm phụ thuộc mạng xã hội của bạn là <span class="text-indigo-600 font-bold">${formattedPercentage}%</span>.</strong> Để hiểu rõ hơn về con số này, chúng ta hãy cùng phân tích chi tiết kết quả của bạn ở từng khía cạnh.</p>
+                <div class="p-4 bg-white rounded-lg shadow-inner">
+                    <h5 class="font-bold text-lg mb-2">1. Phân tích chi tiết từng khía cạnh</h5>
+                    <p class="mb-1"><strong>Sức khỏe thể chất:</strong> (Điểm: ${physical}/25) - ${physical >= 15 ? 'Đang ở mức tốt.' : (physical >= 10 ? 'Cần cải thiện.' : 'Đang có vấn đề.')}</p>
+                    <p class="text-sm pl-4 mb-2">${physical >= 15 ? 'Bạn đang duy trì một sức khỏe tốt, các dấu hiệu như đau đầu, mỏi mắt, hay mệt mỏi thể chất do sử dụng thiết bị điện tử dường như không phải là vấn đề lớn. Điều này cho thấy bạn đã biết cách cân bằng giữa màn hình và các hoạt động thể chất.' : (physical >= 10 ? 'Sức khỏe thể chất của bạn đang ở mức trung bình. Có thể bạn đã bắt đầu cảm thấy mỏi mắt, đau cổ hoặc giấc ngủ bị ảnh hưởng. Hãy chú ý hơn đến các dấu hiệu này, chúng là lời cảnh báo từ cơ thể bạn. Hãy thử các bài tập giãn cơ, nhìn ra xa sau mỗi 20 phút sử dụng điện thoại và đảm bảo ngủ đủ giấc.' : 'Điểm số của bạn cho thấy sức khỏe thể chất đang bị ảnh hưởng nghiêm trọng. Các vấn đề về thị lực, giấc ngủ và thể lực có thể là hậu quả trực tiếp của việc sử dụng mạng xã hội quá nhiều. Đây là lúc bạn cần ưu tiên việc chăm sóc bản thân, đảm bảo bạn có đủ giấc ngủ và dành thời gian cho các hoạt động thể chất để phục hồi năng lượng.')}</p>
+
+                    <p class="mb-1"><strong>Sức khỏe tinh thần:</strong> (Điểm: ${mental}/25) - ${mental >= 15 ? 'Rất ổn định.' : (mental >= 10 ? 'Cần được quan tâm.' : 'Đang bị ảnh hưởng nghiêm trọng.')}</p>
+                    <p class="text-sm pl-4 mb-2">${mental >= 15 ? 'Bạn có một tinh thần vững vàng. Bạn không quá lo lắng về việc bỏ lỡ các xu hướng và ít bị ảnh hưởng bởi những hình ảnh hào nhoáng trên mạng. Điều này là một tài sản quý giá, giúp bạn sống trọn vẹn với hiện tại.' : (mental >= 10 ? 'Sức khỏe tinh thần của bạn đang ở mức cần được quan tâm. Có thể bạn đang cảm thấy áp lực phải thể hiện bản thân hoặc cảm giác trống rỗng khi không có mạng xã hội. Hãy thử viết nhật ký, trò chuyện với bạn bè hoặc tìm một sở thích mới để nuôi dưỡng cảm xúc tích cực.' : 'Điểm số thấp cho thấy bạn đang phải đối mặt với những vấn đề nghiêm trọng như lo lắng, cảm giác trống rỗng hoặc sợ bị bỏ lỡ. Mạng xã hội có thể là nguyên nhân chính dẫn đến những cảm xúc tiêu cực này. Việc so sánh bản thân với người khác có thể làm giảm lòng tự trọng. Đây là lúc bạn cần tìm kiếm sự giúp đỡ từ bạn bè, gia đình hoặc một chuyên gia tâm lý.')}</p>
+
+                    <p class="mb-1"><strong>Mức độ tập trung:</strong> (Điểm: ${concentration}/25) - ${concentration >= 15 ? 'Rất tốt.' : (concentration >= 10 ? 'Cần rèn luyện thêm.' : 'Đang rất thấp.')}</p>
+                    <p class="text-sm pl-4 mb-2">${concentration >= 15 ? 'Bạn có khả năng tập trung tốt. Điều này giúp bạn học tập, làm việc hiệu quả và tận hưởng trọn vẹn các cuộc trò chuyện. Hãy tiếp tục duy trì thói quen tốt này.' : (concentration >= 10 ? 'Khả năng tập trung của bạn đang ở mức trung bình. Bạn dễ bị phân tâm bởi các thông báo và có thể khó khăn khi làm việc mà không kiểm tra điện thoại. Hãy thử các phương pháp như Pomodoro để dần dần cải thiện sự tập trung của mình.' : 'Mức độ tập trung của bạn đang ở mức báo động. Việc dễ dàng bị xao nhãng có thể là dấu hiệu rõ ràng nhất của sự phụ thuộc vào mạng xã hội. Điều này ảnh hưởng trực tiếp đến hiệu quả công việc và học tập. Hãy thử bắt đầu với những khoảng thời gian ngắn không sử dụng điện thoại và tăng dần lên.')}</p>
+                </div>
+                
+                <div class="p-4 bg-white rounded-lg shadow-inner mt-4">
+                    <h5 class="font-bold text-lg mb-2">2. Tại sao điểm số tốt ở các phần riêng lại có thể dẫn đến kết quả phụ thuộc cao?</h5>
+                    <p>Điều này nghe có vẻ mâu thuẫn, nhưng trên thực tế, nó rất phổ biến. Kết quả tổng thể không chỉ dựa trên việc bạn có bị ảnh hưởng tiêu cực hay không, mà còn về mức độ <strong>phụ thuộc vào hành vi</strong>. Một người có thể có sức khỏe thể chất và tinh thần khá tốt, nhưng nếu họ vẫn dành <strong>phần lớn thời gian trong ngày</strong> để lướt mạng xã hội một cách vô thức, thì mức độ phụ thuộc vẫn sẽ ở mức cao. Điều này giống như việc bạn có một chiếc xe với động cơ tốt, lốp xe ổn định, nhưng lại mất kiểm soát vô lăng — chiếc xe vẫn có thể đi được, nhưng nó không đi đúng hướng và có thể gặp nguy hiểm bất cứ lúc nào.</p>
+                    <p class="mt-2">Mạng xã hội được thiết kế để gây nghiện, khiến chúng ta quay lại liên tục. Do đó, ngay cả khi bạn không cảm thấy căng thẳng hay mỏi mắt, hành vi lướt mạng vô thức, không có mục đích rõ ràng, cũng đã là một dạng phụ thuộc. Mục tiêu cuối cùng của ứng dụng này không chỉ là giúp bạn tránh những tác hại trực tiếp, mà còn là giúp bạn lấy lại quyền kiểm soát thời gian và sự tập trung của mình.</p>
+                </div>
+                
+                <div class="p-4 bg-white rounded-lg shadow-inner mt-4">
+                    <h5 class="font-bold text-lg mb-2">3. Lời khuyên tổng thể</h5>
+                    <p>${formattedPercentage >= 60 ? 'Mức độ phụ thuộc mạng xã hội của bạn khá cao. Mặc dù một số lĩnh vực có thể tốt, nhưng tổng thể cho thấy mạng xã hội đang chiếm phần lớn trong cuộc sống của bạn. Hãy bắt đầu bằng việc giảm thời gian sử dụng 10% mỗi tuần và tập trung vào các hoạt động ngoại tuyến.' : (formattedPercentage >= 40 ? 'Mức độ phụ thuộc của bạn ở mức trung bình. Bạn đã nhận ra tầm quan trọng của việc cân bằng. Hãy tiếp tục giảm dần thời gian sử dụng và khám phá thêm các hoạt động lành mạnh để cải thiện điểm số.' : 'Mức độ phụ thuộc của bạn rất thấp. Bạn đã có một lối sống cân bằng và lành mạnh. Hãy tiếp tục phát huy để luôn là người làm chủ cuộc sống số của mình!')}</p>
+                </div>
+            `;
+            
+            return {
+                evaluationDetails,
+                dependencyPercentage,
+                finalAdvice: '' // Not needed anymore since it's in the detailed text
+            };
+        };
+
+        // Event Listeners
+        setLimitBtn.addEventListener('click', async () => {
+            const newLimit = parseInt(limitInput.value, 10);
+            if (!isNaN(newLimit) && newLimit > 0) {
+                userData.limit = newLimit;
+                await saveData();
+                showNotification("Giới hạn đã được đặt", `Giới hạn hàng ngày của bạn đã được đặt là ${newLimit} phút.`);
+                updateUI();
+            }
+        });
+
+        submitUsageBtn.addEventListener('click', async () => {
+            let totalUsage = 0;
+            socialApps.forEach(app => {
+                const input = document.getElementById(`input-${app.id}`);
+                const value = parseInt(input.value, 10) || 0;
+                if (!userData.appUsage[app.id]) userData.appUsage[app.id] = Array(7).fill(0);
+                userData.appUsage[app.id][todayIndex] = value;
+                totalUsage += value;
+            });
+
+            userData.weeklyData[todayIndex] = totalUsage;
+            await saveData();
+            showNotification("Cập nhật thành công", `Tổng thời gian sử dụng hôm nay là ${totalUsage} phút.`);
+            updateUI();
+        });
+
+        addActivityBtn.addEventListener('click', async () => {
+            const newActivityName = newActivityInput.value.trim();
+            if (newActivityName) {
+                const newActivityId = newActivityName.replace(/\s+/g, '_').toLowerCase();
+                const newActivity = { id: newActivityId, name: newActivityName };
+                userData.customActivities = userData.customActivities || [];
+                userData.customActivities.push(newActivity);
+                await saveData();
+                newActivityInput.value = '';
+                showNotification("Hoạt động mới", "Bạn đã thêm một hoạt động lành mạnh mới!");
+                awardBadge('custom_activity');
+                updateUI();
+            }
+        });
+
+        document.addEventListener('click', async (e) => {
+            if (e.target.matches('.complete-activity-btn')) {
+                const activityId = e.target.dataset.id;
+                const activityName = defaultHealthyActivities.find(a => a.id === activityId)?.name || userData.customActivities.find(a => a.id === activityId)?.name;
+                if (!userData.completedActivities[activityId]) {
+                    userData.completedActivities[activityId] = new Date().toISOString().slice(0, 10);
+                    await saveData();
+
+                    awardBadge('first_activity');
+                    const allActivitiesCompleted = [...defaultHealthyActivities, ...(userData.customActivities || [])].every(activity => userData.completedActivities[activity.id]);
+                    if (allActivitiesCompleted) {
+                        awardBadge('all_activities');
+                    }
+                    
+                    const today = new Date().toISOString().slice(0, 10);
+                    const lastDate = userData.lastActivityDate;
+                    
+                    const isSequential = (lastDate && (new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24) === 1);
+                    
+                    if (activityId.includes('reading')) {
+                        userData.readingStreak = isSequential ? (userData.readingStreak || 0) + 1 : 1;
+                        if (userData.readingStreak >= 5) awardBadge('reading_streak_5');
+                        if (userData.readingStreak >= 10) awardBadge('reading_streak_10');
+                    }
+                    if (activityId.includes('exercise')) {
+                        userData.exerciseStreak = isSequential ? (userData.exerciseStreak || 0) + 1 : 1;
+                        if (userData.exerciseStreak >= 5) awardBadge('exercise_streak_5');
+                        if (userData.exerciseStreak >= 10) awardBadge('exercise_streak_10');
+                    }
+                    if (activityId.includes('learning')) {
+                        userData.learningStreak = isSequential ? (userData.learningStreak || 0) + 1 : 1;
+                        if (userData.learningStreak >= 5) awardBadge('learning_streak_5');
+                        if (userData.learningStreak >= 10) awardBadge('learning_streak_10');
+                    }
+                    
+                    userData.lastActivityDate = today;
+                    await saveData();
+                    updateUI();
+                }
+            }
+        });
+
+        startQuizBtn.addEventListener('click', () => {
+            const generateQuiz = (containerId, questions) => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = questions.map((q, index) => `
+                    <div class="quiz-question" data-category="${containerId}" data-index="${index}">
+                        <p class="font-medium">${index + 1}. ${q.q}</p>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            ${quizOptions.map((option, optIndex) => `
+                                <button data-score="${q.score[optIndex]}" class="quiz-option bg-white text-gray-700 px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100 transition duration-300">
+                                    ${option}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                container.classList.remove('hidden');
+            };
+
+            generateQuiz('physical-questions', quizQuestions.physical);
+            generateQuiz('mental-questions', quizQuestions.mental);
+            generateQuiz('concentration-questions', quizQuestions.concentration);
+
+            startQuizBtn.classList.add('hidden');
+            submitQuizBtn.classList.remove('hidden');
+            quizStatus.textContent = 'Hãy trả lời tất cả các câu hỏi để xem kết quả.';
+        });
+
+        submitQuizBtn.addEventListener('click', async () => {
+            const allQuestions = document.querySelectorAll('.quiz-question');
+            let answeredCount = 0;
+            let scores = { physical: 0, mental: 0, concentration: 0 };
+
+            allQuestions.forEach(q => {
+                const selected = q.querySelector('.quiz-option.bg-indigo-500');
+                if (selected) {
+                    const category = q.dataset.category.replace('-questions', '');
+                    scores[category] += parseInt(selected.dataset.score, 10);
+                    answeredCount++;
+                }
+            });
+
+            if (answeredCount === allQuestions.length) {
+                const evaluation = getQuizResultEvaluation(scores);
+                
+                quizEvaluation.innerHTML = evaluation.evaluationDetails;
+                dependencyScoreDisplay.textContent = ``;
+
+                const today = new Date().toISOString().slice(0, 10);
+                userData.quizHistory.push({ date: today, scores: scores });
+                await saveData();
+
+                quizResultSection.classList.remove('hidden');
+                quizStatus.classList.add('hidden');
+                submitQuizBtn.classList.add('hidden');
+                awardBadge('quiz_pro');
+                
+                const dependencyPercentage = ((scores.physical * 0.4) + (scores.mental * 0.4) + (scores.concentration * 0.2)) / 5 * 20;
+                if (dependencyPercentage < 50) awardBadge('dependency_low_50');
+                if (dependencyPercentage < 40) awardBadge('dependency_low_40');
+                if (dependencyPercentage < 30) awardBadge('dependency_low_30');
+
+                if (quizChart) quizChart.destroy();
+                quizChart = new Chart(quizChartCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Thể chất', 'Tinh thần', 'Tập trung'],
+                        datasets: [{
+                            label: 'Điểm của bạn (càng cao càng tốt)',
+                            data: [scores.physical, scores.mental, scores.concentration],
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                            borderColor: '#6366f1',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#6366f1'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        elements: { line: { borderWidth: 3 } },
+                        scales: { r: { suggestedMin: 0, suggestedMax: 25, pointLabels: { font: { size: 14 } } } }
+                    }
+                });
+                
+                updateCharts();
+
+            } else {
+                quizStatus.textContent = 'Vui lòng trả lời tất cả các câu hỏi.';
+            }
+        });
+
+        quizContent.addEventListener('click', (e) => {
+            if (e.target.matches('.quiz-option')) {
+                const parent = e.target.closest('.quiz-question');
+                parent.querySelectorAll('.quiz-option').forEach(btn => {
+                    btn.classList.remove('bg-indigo-500', 'text-white');
+                    btn.classList.add('bg-white', 'text-gray-700');
+                });
+                e.target.classList.add('bg-indigo-500', 'text-white');
+                e.target.classList.remove('bg-white', 'text-gray-700');
+            }
+        });
+
+        // Pomodoro Timer Logic
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+        }
+
+        function playBellSound() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 440; // A4
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1);
+            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 1);
+        }
+
+        function startTimer() {
+            pomodoro.isRunning = true;
+            startPauseBtn.textContent = 'Tạm Dừng';
+            startPauseBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+            startPauseBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+            resetBtn.classList.remove('hidden');
+
+            pomodoro.intervalId = setInterval(() => {
+                pomodoro.timeRemaining--;
+                timerDisplay.textContent = formatTime(pomodoro.timeRemaining);
+
+                if (pomodoro.timeRemaining <= 0) {
+                    playBellSound();
+                    if (pomodoro.isWorkTime) {
+                        pomodoro.isWorkTime = false;
+                        pomodoro.timeRemaining = pomodoro.breakDuration;
+                        timerStatus.textContent = 'Giờ nghỉ!';
+                    } else {
+                        pomodoro.isWorkTime = true;
+                        pomodoro.timeRemaining = pomodoro.workDuration;
+                        timerStatus.textContent = 'Bắt đầu một chu kỳ mới!';
+                    }
+                    timerDisplay.textContent = formatTime(pomodoro.timeRemaining);
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            pomodoro.isRunning = false;
+            startPauseBtn.textContent = 'Tiếp Tục';
+            startPauseBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+            startPauseBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            clearInterval(pomodoro.intervalId);
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            pomodoro.isWorkTime = true;
+            pomodoro.timeRemaining = pomodoro.workDuration;
+            timerDisplay.textContent = formatTime(pomodoro.workDuration);
+            timerStatus.textContent = 'Sẵn sàng bắt đầu!';
+            startPauseBtn.textContent = 'Bắt Đầu';
+            startPauseBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+            startPauseBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            resetBtn.classList.add('hidden');
+        }
+        
+        startPauseBtn.addEventListener('click', () => {
+            if (pomodoro.timeRemaining <= 0) {
+                pomodoro.timeRemaining = pomodoro.workDuration;
+                timerStatus.textContent = 'Giờ làm việc!';
+            }
+            if (pomodoro.isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        });
+
+        resetBtn.addEventListener('click', resetTimer);
+
+        // Firebase Auth State Listener
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                const userDocRef = getUserDocRef();
+                
+                onSnapshot(userDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        userData = docSnapshot.data();
+                        
+                        const today = new Date().toISOString().slice(0, 10);
+                        const lastLoginDate = userData.lastLoginDate;
+                        const isSequentialLogin = lastLoginDate && (new Date(today) - new Date(lastLoginDate)) / (1000 * 60 * 60 * 24) === 1;
+                        userData.loginStreak = isSequentialLogin ? (userData.loginStreak || 0) + 1 : 1;
+                        userData.lastLoginDate = today;
+                        if (userData.loginStreak >= 5) awardBadge('login_streak_5');
+                        if (userData.loginStreak >= 10) awardBadge('login_streak_10');
+                        if (userData.loginStreak >= 20) awardBadge('login_streak_20');
+
+                        const totalUsageToday = userData.weeklyData[todayIndex] || 0;
+                        if (totalUsageToday < userData.limit) {
+                            const lastCheckDate = userData.lastUnderLimitCheck;
+                            const isSequentialUnderLimit = lastCheckDate && (new Date(today) - new Date(lastCheckDate)) / (1000 * 60 * 60 * 24) === 1;
+                            userData.underLimitStreak = isSequentialUnderLimit ? (userData.underLimitStreak || 0) + 1 : 1;
+                            if (userData.underLimitStreak >= 5) awardBadge('under_limit_5');
+                            if (userData.underLimitStreak >= 10) awardBadge('under_limit_10');
+                            if (userData.underLimitStreak >= 20) awardBadge('under_limit_20');
+                        } else {
+                            userData.underLimitStreak = 0;
+                        }
+                        userData.lastUnderLimitCheck = today;
+                        
+                        awardBadge('first_day');
+                        
+                        initApp();
+                    } else {
+                        userData.limit = initialLimit;
+                        saveData();
+                        initApp();
+                    }
+                }, (error) => {
+                    console.error("Firestore listener error:", error);
+                    initApp();
+                });
+            } else {
+                if (initial_auth_token) {
+                    try {
+                        await signInWithCustomToken(auth, initial_auth_token);
+                    } catch (error) {
+                        console.error("Error signing in with custom token:", error);
+                        initApp();
+                    }
+                } else {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (error) {
+                        console.error("Error signing in anonymously:", error);
+                        initApp();
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
+
 
