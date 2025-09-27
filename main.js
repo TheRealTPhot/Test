@@ -14,6 +14,7 @@ let userData = {
     exerciseStreak: 0,
     checkinStreak: 0,
     lastCheckinDate: null,
+    checkinHistory: {}, // New property to store check-in history
     quizScores: { physical: 0, mental: 0, concentration: 0 },
     quizHistory: [],
     lastLoginDate: null,
@@ -126,6 +127,12 @@ function initLocalStorage() {
         // Initialize activityHistory if it doesn't exist
         if (!userData.activityHistory) {
             userData.activityHistory = {};
+            saveData();
+        }
+        
+        // Initialize checkinHistory if it doesn't exist
+        if (!userData.checkinHistory) {
+            userData.checkinHistory = {};
             saveData();
         }
         
@@ -282,6 +289,37 @@ function updateActivityHistory() {
     `).join('');
 }
 
+// Update check-in streak visualization
+function updateCheckinStreakVisualization() {
+    const container = document.getElementById('checkin-streak-container');
+    if (!container) return;
+    
+    // Get the last 7 days
+    const days = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        days.push(date.toISOString().slice(0, 10));
+    }
+    
+    // Day names
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    
+    container.innerHTML = days.map((dateStr, index) => {
+        const dayName = dayNames[new Date(dateStr).getDay()];
+        const hasCheckedIn = userData.checkinHistory[dateStr] || false;
+        
+        return `
+            <div class="day-item">
+                <i class="fas fa-fire fire-icon ${hasCheckedIn ? 'fire-active' : 'fire-inactive'}"></i>
+                <span class="text-xs text-gray-600">${dayName}</span>
+            </div>
+        `;
+    }).join('');
+}
+
 // Initialize app
 function initApp() {
     const loadingSpinner = document.getElementById('loading-spinner');
@@ -334,7 +372,7 @@ function updateMainUI() {
 
     // Update check-in button
     const today = new Date().toISOString().slice(0, 10);
-    const hasCheckedInToday = userData.lastCheckinDate === today;
+    const hasCheckedInToday = userData.checkinHistory[today] || false;
     const checkinBtn = document.getElementById('checkin-btn');
     
     if (checkinBtn) {
@@ -348,6 +386,9 @@ function updateMainUI() {
             checkinBtn.disabled = false;
         }
     }
+
+    // Update check-in streak visualization
+    updateCheckinStreakVisualization();
 
     // Update activities
     const allActivities = defaultHealthyActivities.concat(userData.customActivities || []);
@@ -688,15 +729,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check-in button event listener
     document.getElementById('checkin-btn')?.addEventListener('click', async () => {
         const today = new Date().toISOString().slice(0, 10);
-        const lastCheckinDate = userData.lastCheckinDate;
         
         // Check if already checked in today
-        if (lastCheckinDate === today) {
+        if (userData.checkinHistory[today]) {
             showNotification("Đã Điểm Danh", "Bạn đã điểm danh hôm nay rồi!");
             return;
         }
         
+        // Update check-in history
+        userData.checkinHistory[today] = true;
+        
         // Update check-in streak
+        const lastCheckinDate = userData.lastCheckinDate;
         const isSequential = (lastCheckinDate && (new Date(today) - new Date(lastCheckinDate)) / (1000 * 60 * 60 * 24) === 1);
         userData.checkinStreak = isSequential ? (userData.checkinStreak || 0) + 1 : 1;
         userData.lastCheckinDate = today;
@@ -715,41 +759,52 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.matches('.complete-activity-btn')) {
             const activityId = e.target.dataset.id;
             const activityName = defaultHealthyActivities.find(a => a.id === activityId)?.name || userData.customActivities.find(a => a.id === activityId)?.name;
-            if (!userData.completedActivities[activityId]) {
-                userData.completedActivities[activityId] = new Date().toISOString().slice(0, 10);
-                saveData();
-
-                awardBadge('first_activity');
-                const allActivitiesCompleted = [...defaultHealthyActivities, ...(userData.customActivities || [])].every(activity => userData.completedActivities[activity.id]);
-                if (allActivitiesCompleted) {
-                    awardBadge('all_activities');
-                }
-               
-                const today = new Date().toISOString().slice(0, 10);
-                const lastDate = userData.lastActivityDate;
-               
-                const isSequential = (lastDate && (new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24) === 1);
-               
-                if (activityId.includes('reading')) {
-                    userData.readingStreak = isSequential ? (userData.readingStreak || 0) + 1 : 1;
-                    if (userData.readingStreak >= 5) awardBadge('reading_streak_5');
-                    if (userData.readingStreak >= 10) awardBadge('reading_streak_10');
-                }
-                if (activityId.includes('exercise')) {
-                    userData.exerciseStreak = isSequential ? (userData.exerciseStreak || 0) + 1 : 1;
-                    if (userData.exerciseStreak >= 5) awardBadge('exercise_streak_5');
-                    if (userData.exerciseStreak >= 10) awardBadge('exercise_streak_10');
-                }
-                if (activityId.includes('learning')) {
-                    userData.learningStreak = isSequential ? (userData.learningStreak || 0) + 1 : 1;
-                    if (userData.learningStreak >= 5) awardBadge('learning_streak_5');
-                    if (userData.learningStreak >= 10) awardBadge('learning_streak_10');
-                }
-               
-                userData.lastActivityDate = today;
-                saveData();
-                updateMainUI();
+            
+            // Check if already completed today
+            const today = new Date().toISOString().slice(0, 10);
+            if (userData.completedActivities[activityId] === today) {
+                return; // Already completed today
             }
+            
+            // Mark activity as completed
+            userData.completedActivities[activityId] = today;
+            
+            // Also save to today's activity history
+            if (!userData.activityHistory[today]) {
+                userData.activityHistory[today] = {};
+            }
+            userData.activityHistory[today][activityId] = true;
+            
+            saveData();
+
+            awardBadge('first_activity');
+            const allActivitiesCompleted = [...defaultHealthyActivities, ...(userData.customActivities || [])].every(activity => userData.completedActivities[activity.id]);
+            if (allActivitiesCompleted) {
+                awardBadge('all_activities');
+            }
+           
+            const lastDate = userData.lastActivityDate;
+            const isSequential = (lastDate && (new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24) === 1);
+           
+            if (activityId.includes('reading')) {
+                userData.readingStreak = isSequential ? (userData.readingStreak || 0) + 1 : 1;
+                if (userData.readingStreak >= 5) awardBadge('reading_streak_5');
+                if (userData.readingStreak >= 10) awardBadge('reading_streak_10');
+            }
+            if (activityId.includes('exercise')) {
+                userData.exerciseStreak = isSequential ? (userData.exerciseStreak || 0) + 1 : 1;
+                if (userData.exerciseStreak >= 5) awardBadge('exercise_streak_5');
+                if (userData.exerciseStreak >= 10) awardBadge('exercise_streak_10');
+            }
+            if (activityId.includes('learning')) {
+                userData.learningStreak = isSequential ? (userData.learningStreak || 0) + 1 : 1;
+                if (userData.learningStreak >= 5) awardBadge('learning_streak_5');
+                if (userData.learningStreak >= 10) awardBadge('learning_streak_10');
+            }
+           
+            userData.lastActivityDate = today;
+            saveData();
+            updateMainUI();
         }
     });
 
