@@ -5,7 +5,8 @@ let userData = {
     weeklyData: Array(7).fill(0),
     appUsage: {},
     badges: {},
-    completedActivities: {},
+    // Thay đổi cấu trúc completedActivities
+    completedActivities: {}, // { activityId: [date1, date2, ...] }
     customActivities: [],
     loginStreak: 0,
     underLimitStreak: 0,
@@ -15,7 +16,9 @@ let userData = {
     quizScores: { physical: 0, mental: 0, concentration: 0 },
     quizHistory: [],
     lastLoginDate: null,
-    lastActivityDate: null
+    lastResetDate: null,
+    // Thêm trường mới để lưu trữ lịch sử hoạt động theo ngày
+    activityHistory: {} // { date: { activityId1: true, activityId2: true, ... } }
 };
 
 const todayIndex = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
@@ -133,11 +136,69 @@ function initApp() {
 
     if (document.getElementById('user-id-display')) {
         document.getElementById('user-id-display').textContent = userId;
+        
+        // Kiểm tra reset hàng ngày
+        checkDailyReset();
+        
+        // Kiểm tra và cập nhật thành tựu từ dữ liệu khảo sát
+        checkAndUpdateQuizBadges();
+        
         updateMainUI();
+        
+        // Khởi tạo giao diện lịch sử
+        updateActivityHistory('day');
     }
     
     if (document.getElementById('quiz-content')) {
         updateSurveyUI();
+    }
+}
+
+// Thêm hàm kiểm tra và cập nhật thành tựu từ khảo sát
+function checkAndUpdateQuizBadges() {
+    // Kiểm tra nếu người dùng đã hoàn thành khảo sát
+    if (userData.quizHistory && userData.quizHistory.length > 0) {
+        // Đảm bảo thành tựu quiz_pro được cấp
+        awardBadge('quiz_pro');
+        
+        // Kiểm tra kết quả khảo sát gần nhất
+        const latestQuiz = userData.quizHistory[userData.quizHistory.length - 1];
+        const scores = latestQuiz.scores;
+        
+        const dependencyPercentage = ((scores.physical * 0.4) + (scores.mental * 0.4) + (scores.concentration * 0.2)) / 5 * 20;
+        if (dependencyPercentage < 50) awardBadge('dependency_low_50');
+        if (dependencyPercentage < 40) awardBadge('dependency_low_40');
+        if (dependencyPercentage < 30) awardBadge('dependency_low_30');
+    }
+}
+
+// Thêm hàm lấy ngày hiện tại theo GMT+7
+function getGMT7Date() {
+    const now = new Date();
+    // Convert to UTC+7
+    const utc7 = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60000));
+    return utc7;
+}
+
+// Cập nhật hàm kiểm tra reset tự động
+function checkDailyReset() {
+    const nowGMT7 = getGMT7Date();
+    const todayGMT7 = nowGMT7.toISOString().slice(0, 10);
+    const lastReset = userData.lastResetDate;
+    
+    // Kiểm tra nếu đã qua 6h sáng hôm nay (GMT+7)
+    if (!lastReset || lastReset !== todayGMT7) {
+        // Thiết lập thời gian reset là 6h sáng GMT+7
+        const resetTime = new Date(nowGMT7);
+        resetTime.setHours(6, 0, 0, 0);
+        
+        // Nếu thời gian hiện tại đã qua 6h sáng
+        if (nowGMT7 >= resetTime) {
+            // Reset các hoạt động hàng ngày
+            userData.lastResetDate = todayGMT7;
+            saveData();
+            updateMainUI();
+        }
     }
 }
 
@@ -172,15 +233,25 @@ function updateMainUI() {
 
     // Update activities
     const allActivities = defaultHealthyActivities.concat(userData.customActivities || []);
-    document.getElementById('healthy-activities-list').innerHTML = allActivities.map(activity => `
-        <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-            <p class="text-gray-700">${activity.name}</p>
-            <button id="activity-${activity.id}" data-id="${activity.id}" class="complete-activity-btn px-4 py-1 rounded-full text-sm font-semibold transition duration-300
-                ${userData.completedActivities[activity.id] ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-indigo-200 text-indigo-700 hover:bg-indigo-300'}">
-                ${userData.completedActivities[activity.id] ? 'Đã Xong' : 'Hoàn Thành'}
-            </button>
-        </div>
-    `).join('');
+    const todayGMT7 = getGMT7Date().toISOString().slice(0, 10);
+    
+    document.getElementById('healthy-activities-list').innerHTML = allActivities.map(activity => {
+        const isCompletedToday = userData.completedActivities[activity.id]?.includes(todayGMT7);
+        const streak = getActivityStreak(activity.id);
+        
+        return `
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                <div>
+                    <p class="text-gray-700">${activity.name}</p>
+                    ${streak > 0 ? `<p class="text-xs text-indigo-600">Chuỗi: ${streak} ngày</p>` : ''}
+                </div>
+                <button id="activity-${activity.id}" data-id="${activity.id}" class="complete-activity-btn px-4 py-1 rounded-full text-sm font-semibold transition duration-300
+                    ${isCompletedToday ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-indigo-200 text-indigo-700 hover:bg-indigo-300'}">
+                    ${isCompletedToday ? 'Đã Hoàn Thành Hôm Nay' : 'Hoàn Thành'}
+                </button>
+            </div>
+        `;
+    }).join('');
 
     // Update badges
     document.getElementById('badges-grid').innerHTML = allBadges.map(badge => `
@@ -440,6 +511,267 @@ function resetTimer() {
     document.getElementById('reset-btn').classList.add('hidden');
 }
 
+// Thêm hàm lấy chuỗi ngày của hoạt động
+function getActivityStreak(activityId) {
+    if (!userData.completedActivities[activityId] || userData.completedActivities[activityId].length === 0) return 0;
+    
+    let streak = 0;
+    let currentDate = new Date(getGMT7Date());
+    currentDate.setHours(0, 0, 0, 0);
+    
+    // Kiểm tra ngược từ hôm nay
+    while (true) {
+        const dateStr = currentDate.toISOString().slice(0, 10);
+        if (userData.completedActivities[activityId]?.includes(dateStr)) {
+            streak++;
+            // Lùi lại 1 ngày
+            currentDate.setDate(currentDate.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+    
+    return streak;
+}
+
+// Thêm hàm cập nhật chuỗi ngày
+function updateStreaks(activityId, today) {
+    const lastDate = userData.lastActivityDate;
+    const isSequential = lastDate && 
+        (new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24) === 1;
+    
+    // Cập nhật chuỗi ngày chung
+    userData.lastActivityDate = today;
+    
+    // Cập nhật chuỗi ngày cho từng loại hoạt động
+    if (activityId.includes('reading')) {
+        userData.readingStreak = isSequential ? (userData.readingStreak || 0) + 1 : 1;
+        if (userData.readingStreak >= 5) awardBadge('reading_streak_5');
+        if (userData.readingStreak >= 10) awardBadge('reading_streak_10');
+    }
+    if (activityId.includes('exercise')) {
+        userData.exerciseStreak = isSequential ? (userData.exerciseStreak || 0) + 1 : 1;
+        if (userData.exerciseStreak >= 5) awardBadge('exercise_streak_5');
+        if (userData.exerciseStreak >= 10) awardBadge('exercise_streak_10');
+    }
+    if (activityId.includes('learning')) {
+        userData.learningStreak = isSequential ? (userData.learningStreak || 0) + 1 : 1;
+        if (userData.learningStreak >= 5) awardBadge('learning_streak_5');
+        if (userData.learningStreak >= 10) awardBadge('learning_streak_10');
+    }
+}
+
+// Thêm hàm cập nhật giao diện lịch sử hoạt động
+function updateActivityHistory(viewType = 'day') {
+    const container = document.getElementById('history-container');
+    const nowGMT7 = getGMT7Date();
+    const todayGMT7 = nowGMT7.toISOString().slice(0, 10);
+    
+    // Cập nhật trạng thái nút
+    document.getElementById('view-day-btn').className = viewType === 'day' ? 
+        'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
+        'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
+    document.getElementById('view-week-btn').className = viewType === 'week' ? 
+        'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
+        'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
+    document.getElementById('view-month-btn').className = viewType === 'month' ? 
+        'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
+        'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
+    
+    if (viewType === 'day') {
+        // Hiển thị lịch sử theo ngày
+        const todayActivities = userData.activityHistory[todayGMT7] || {};
+        const allActivities = [...defaultHealthyActivities, ...(userData.customActivities || [])];
+        
+        container.innerHTML = `
+            <div class="mb-4">
+                <h4 class="font-semibold text-lg">Hoạt động hôm nay (${todayGMT7})</h4>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${allActivities.map(activity => `
+                    <div class="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                        <div class="flex-1">
+                            <p class="text-gray-700">${activity.name}</p>
+                        </div>
+                        <div class="w-6 h-6 rounded-full ${todayActivities[activity.id] ? 'bg-green-500' : 'bg-gray-300'} flex items-center justify-center">
+                            ${todayActivities[activity.id] ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else if (viewType === 'week') {
+        // Hiển thị lịch sử theo tuần
+        const weekSummary = getWeekSummary();
+        
+        container.innerHTML = `
+            <div class="mb-4">
+                <h4 class="font-semibold text-lg">Tóm tắt tuần này</h4>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-2 px-4 text-left">Hoạt động</th>
+                            ${weekSummary.days.map(day => `<th class="py-2 px-4 text-center">${day}</th>`).join('')}
+                            <th class="py-2 px-4 text-center">Tổng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${weekSummary.activities.map(activity => `
+                            <tr class="border-b">
+                                <td class="py-2 px-4">${activity.name}</td>
+                                ${activity.completion.map(completed => 
+                                    `<td class="py-2 px-4 text-center">
+                                        ${completed ? '<i class="fas fa-check text-green-500"></i>' : '-'}
+                                    </td>`
+                                ).join('')}
+                                <td class="py-2 px-4 text-center font-semibold">${activity.total}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else if (viewType === 'month') {
+        // Hiển thị lịch sử theo tháng
+        const monthSummary = getMonthSummary();
+        
+        container.innerHTML = `
+            <div class="mb-4">
+                <h4 class="font-semibold text-lg">Tóm tắt tháng này</h4>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${monthSummary.map(week => `
+                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                        <h5 class="font-semibold mb-2">Tuần ${week.weekNumber}</h5>
+                        <div class="space-y-2">
+                            ${week.activities.map(activity => `
+                                <div class="flex justify-between">
+                                    <span class="text-sm">${activity.name}</span>
+                                    <span class="text-sm font-semibold">${activity.count} lần</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+// Thêm hàm lấy tóm tắt theo tuần
+function getWeekSummary() {
+    const nowGMT7 = getGMT7Date();
+    const todayGMT7 = nowGMT7.toISOString().slice(0, 10);
+    const currentDayOfWeek = nowGMT7.getDay();
+    
+    // Tính ngày bắt đầu của tuần (Chủ Nhật)
+    const startDate = new Date(nowGMT7);
+    startDate.setDate(startDate.getDate() - currentDayOfWeek);
+    
+    const days = [];
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    
+    // Tạo mảng 7 ngày của tuần
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        days.push(date.toISOString().slice(0, 10));
+    }
+    
+    // Lấy tất cả hoạt động
+    const allActivities = [...defaultHealthyActivities, ...(userData.customActivities || [])];
+    
+    // Tạo dữ liệu tóm tắt
+    const activities = allActivities.map(activity => {
+        const completion = days.map(day => {
+            return userData.activityHistory[day]?.[activity.id] || false;
+        });
+        
+        const total = completion.filter(Boolean).length;
+        
+        return {
+            name: activity.name,
+            completion,
+            total
+        };
+    });
+    
+    return {
+        days: days.map(day => {
+            const date = new Date(day);
+            return dayNames[date.getDay()];
+        }),
+        activities
+    };
+}
+
+// Thêm hàm lấy tóm tắt theo tháng
+function getMonthSummary() {
+    const nowGMT7 = getGMT7Date();
+    const year = nowGMT7.getFullYear();
+    const month = nowGMT7.getMonth();
+    
+    // Tính số tuần trong tháng
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    const weeks = [];
+    let currentWeek = 1;
+    let currentWeekStart = new Date(firstDay);
+    
+    // Đảm bảo tuần bắt đầu từ Chủ Nhật
+    const dayOfWeek = firstDay.getDay();
+    currentWeekStart.setDate(firstDay.getDate() - dayOfWeek);
+    
+    while (currentWeekStart <= lastDay) {
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        // Đảm bảo không vượt qua ngày cuối tháng
+        if (weekEnd > lastDay) {
+            weekEnd.setTime(lastDay.getTime());
+        }
+        
+        const weekActivities = [];
+        
+        // Lấy tất cả hoạt động
+        const allActivities = [...defaultHealthyActivities, ...(userData.customActivities || [])];
+        
+        // Tính toán số lần hoàn thành mỗi hoạt động trong tuần
+        allActivities.forEach(activity => {
+            let count = 0;
+            
+            // Kiểm tra từng ngày trong tuần
+            for (let day = new Date(currentWeekStart); day <= weekEnd; day.setDate(day.getDate() + 1)) {
+                const dayStr = day.toISOString().slice(0, 10);
+                if (userData.activityHistory[dayStr]?.[activity.id]) {
+                    count++;
+                }
+            }
+            
+            if (count > 0) {
+                weekActivities.push({
+                    name: activity.name,
+                    count
+                });
+            }
+        });
+        
+        weeks.push({
+            weekNumber: currentWeek,
+            activities: weekActivities
+        });
+        
+        // Chuyển sang tuần tiếp theo
+        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        currentWeek++;
+    }
+    
+    return weeks;
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize localStorage
@@ -455,6 +787,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('back-to-main-btn')?.addEventListener('click', () => {
         window.location.href = 'index.html';
+    });
+    
+    document.getElementById('back-to-main-after-quiz')?.addEventListener('click', () => {
+        window.location.href = 'index.html';
+    });
+    
+    // History view buttons
+    document.getElementById('view-day-btn')?.addEventListener('click', () => {
+        updateActivityHistory('day');
+    });
+    
+    document.getElementById('view-week-btn')?.addEventListener('click', () => {
+        updateActivityHistory('week');
+    });
+    
+    document.getElementById('view-month-btn')?.addEventListener('click', () => {
+        updateActivityHistory('month');
     });
     
     // Main page event listeners
@@ -502,41 +851,42 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', async (e) => {
         if (e.target.matches('.complete-activity-btn')) {
             const activityId = e.target.dataset.id;
-            const activityName = defaultHealthyActivities.find(a => a.id === activityId)?.name || userData.customActivities.find(a => a.id === activityId)?.name;
-            if (!userData.completedActivities[activityId]) {
-                userData.completedActivities[activityId] = new Date().toISOString().slice(0, 10);
-                saveData();
-
+            const activityName = defaultHealthyActivities.find(a => a.id === activityId)?.name || 
+                                userData.customActivities.find(a => a.id === activityId)?.name;
+            
+            const todayGMT7 = getGMT7Date().toISOString().slice(0, 10);
+            
+            // Kiểm tra nếu hoạt động đã được hoàn thành hôm nay chưa
+            const completedToday = userData.completedActivities[activityId]?.includes(todayGMT7);
+            
+            if (!completedToday) {
+                // Thêm ngày hoàn thành vào mảng
+                if (!userData.completedActivities[activityId]) {
+                    userData.completedActivities[activityId] = [];
+                }
+                userData.completedActivities[activityId].push(todayGMT7);
+                
+                // Cập nhật lịch sử hoạt động theo ngày
+                if (!userData.activityHistory[todayGMT7]) {
+                    userData.activityHistory[todayGMT7] = {};
+                }
+                userData.activityHistory[todayGMT7][activityId] = true;
+                
                 awardBadge('first_activity');
-                const allActivitiesCompleted = [...defaultHealthyActivities, ...(userData.customActivities || [])].every(activity => userData.completedActivities[activity.id]);
+                
+                // Cập nhật chuỗi ngày
+                updateStreaks(activityId, todayGMT7);
+                
+                // Kiểm tra nếu tất cả hoạt động đã được hoàn thành hôm nay
+                const allActivitiesCompleted = [...defaultHealthyActivities, ...(userData.customActivities || [])]
+                    .every(activity => userData.completedActivities[activity.id]?.includes(todayGMT7));
                 if (allActivitiesCompleted) {
                     awardBadge('all_activities');
                 }
-               
-                const today = new Date().toISOString().slice(0, 10);
-                const lastDate = userData.lastActivityDate;
-               
-                const isSequential = (lastDate && (new Date(today) - new Date(lastDate)) / (1000 * 60 * 60 * 24) === 1);
-               
-                if (activityId.includes('reading')) {
-                    userData.readingStreak = isSequential ? (userData.readingStreak || 0) + 1 : 1;
-                    if (userData.readingStreak >= 5) awardBadge('reading_streak_5');
-                    if (userData.readingStreak >= 10) awardBadge('reading_streak_10');
-                }
-                if (activityId.includes('exercise')) {
-                    userData.exerciseStreak = isSequential ? (userData.exerciseStreak || 0) + 1 : 1;
-                    if (userData.exerciseStreak >= 5) awardBadge('exercise_streak_5');
-                    if (userData.exerciseStreak >= 10) awardBadge('exercise_streak_10');
-                }
-                if (activityId.includes('learning')) {
-                    userData.learningStreak = isSequential ? (userData.learningStreak || 0) + 1 : 1;
-                    if (userData.learningStreak >= 5) awardBadge('learning_streak_5');
-                    if (userData.learningStreak >= 10) awardBadge('learning_streak_10');
-                }
-               
-                userData.lastActivityDate = today;
+                
                 saveData();
                 updateMainUI();
+                updateActivityHistory('day');
             }
         }
     });
@@ -606,11 +956,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const today = new Date().toISOString().slice(0, 10);
             userData.quizHistory.push({ date: today, scores: scores });
+            
+            // Lưu dữ liệu trước khi cập nhật giao diện
             saveData();
 
             document.getElementById('quiz-result-section').classList.remove('hidden');
             document.getElementById('quiz-status').classList.add('hidden');
             document.getElementById('submit-quiz-btn').classList.add('hidden');
+            
+            // Cấp thành tựu
             awardBadge('quiz_pro');
            
             const dependencyPercentage = ((scores.physical * 0.4) + (scores.mental * 0.4) + (scores.concentration * 0.2)) / 5 * 20;
@@ -618,6 +972,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (dependencyPercentage < 40) awardBadge('dependency_low_40');
             if (dependencyPercentage < 30) awardBadge('dependency_low_30');
 
+            // Cập nhật biểu đồ
             if (window.quizChart) window.quizChart.destroy();
             window.quizChart = new Chart(document.getElementById('quiz-chart').getContext('2d'), {
                 type: 'radar',
@@ -640,6 +995,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
            
             updateCharts();
+            
+            // Hiển thị thông báo thành công
+            showNotification("Khảo sát hoàn thành", "Kết quả khảo sát của bạn đã được lưu. Hãy quay lại trang chính để xem thành tựu mới!");
         } else {
             document.getElementById('quiz-status').textContent = 'Vui lòng trả lời tất cả các câu hỏi.';
         }
