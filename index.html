@@ -81,6 +81,34 @@
         .checkin-button:hover {
             box-shadow: 0 6px 8px rgba(99, 102, 241, 0.4);
         }
+        .checkin-streak {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+        }
+        .day-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 40px;
+        }
+        .fire-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+        .fire-active {
+            color: #f97316;
+            text-shadow: 0 0 10px #f97316;
+            animation: flicker 1.5s infinite alternate;
+        }
+        .fire-inactive {
+            color: #d1d5db;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -167,6 +195,14 @@
                             <i class="fas fa-calendar-check mr-2"></i> Điểm Danh Hàng Ngày
                         </button>
                         <p class="text-xs text-gray-500 mt-1 text-center">Điểm danh mỗi ngày để duy trì chuỗi thành tích!</p>
+                    </div>
+                    
+                    <!-- Check-in Streak Visualization -->
+                    <div class="mb-4">
+                        <p class="text-sm font-medium text-gray-700 mb-2">Chuỗi điểm danh 7 ngày gần nhất:</p>
+                        <div class="checkin-streak" id="checkin-streak-container">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
                     </div>
                     
                     <div id="healthy-activities-list" class="space-y-3">
