@@ -12,6 +12,8 @@ let userData = {
     learningStreak: 0,
     readingStreak: 0,
     exerciseStreak: 0,
+    checkinStreak: 0,
+    lastCheckinDate: null,
     quizScores: { physical: 0, mental: 0, concentration: 0 },
     quizHistory: [],
     lastLoginDate: null,
@@ -62,6 +64,9 @@ const allBadges = [
     { id: 'exercise_streak_5', name: 'Chuỗi tập thể dục 5', description: 'Hoàn thành hoạt động tập thể dục 5 ngày liên tiếp', icon: '💪' },
     { id: 'exercise_streak_10', name: 'Chuỗi tập thể dục 10', description: 'Hoàn thành hoạt động tập thể dục 10 ngày liên tiếp', icon: '🏋️' },
     { id: 'custom_activity', name: 'Sáng tạo', description: 'Thêm một hoạt động lành mạnh của riêng bạn', icon: '🎨' },
+    { id: 'checkin_streak_5', name: 'Điểm danh 5 ngày', description: 'Điểm danh 5 ngày liên tiếp', icon: '📅' },
+    { id: 'checkin_streak_10', name: 'Điểm danh 10 ngày', description: 'Điểm danh 10 ngày liên tiếp', icon: '📆' },
+    { id: 'checkin_streak_20', name: 'Điểm danh 20 ngày', description: 'Điểm danh 20 ngày liên tiếp', icon: '🗓️' },
 ];
 
 const quizQuestions = {
@@ -123,6 +128,18 @@ function initLocalStorage() {
             userData.activityHistory = {};
             saveData();
         }
+        
+        // Initialize checkinStreak if it doesn't exist
+        if (userData.checkinStreak === undefined) {
+            userData.checkinStreak = 0;
+            saveData();
+        }
+        
+        // Initialize lastCheckinDate if it doesn't exist
+        if (!userData.lastCheckinDate) {
+            userData.lastCheckinDate = null;
+            saveData();
+        }
     } else {
         saveData();
     }
@@ -162,6 +179,27 @@ function checkActivityReset() {
                 userData.activityHistory[yesterdayStr][activityId] = true;
             }
         });
+        
+        // Check if user stayed under limit yesterday
+        const yesterdayIndex = (yesterday.getDay() + 6) % 7; // Convert to 0=Mon, 1=Tue, ..., 6=Sun
+        const yesterdayUsage = userData.weeklyData[yesterdayIndex] || 0;
+        const userLimit = userData.limit || 60;
+        
+        if (yesterdayUsage <= userLimit) {
+            // Increment under limit streak
+            userData.underLimitStreak = (userData.underLimitStreak || 0) + 1;
+            
+            // Award badges based on streak
+            if (userData.underLimitStreak >= 1) awardBadge('under_limit_1');
+            if (userData.underLimitStreak >= 5) awardBadge('under_limit_5');
+            if (userData.underLimitStreak >= 10) awardBadge('under_limit_10');
+            if (userData.underLimitStreak >= 20) awardBadge('under_limit_20');
+            
+            showNotification("Thành Tựu Mới!", `Bạn đã giữ thời gian sử dụng dưới giới hạn trong ${userData.underLimitStreak} ngày!`);
+        } else {
+            // Reset streak if over limit
+            userData.underLimitStreak = 0;
+        }
         
         // Reset completed activities
         userData.completedActivities = {};
@@ -293,6 +331,23 @@ function updateMainUI() {
             <input type="number" id="input-${app.id}" placeholder="${app.name} (phút)" value="${(userData.appUsage[app.id] && userData.appUsage[app.id][todayIndex]) || 0}" class="flex-grow rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400">
         </div>
     `).join('');
+
+    // Update check-in button
+    const today = new Date().toISOString().slice(0, 10);
+    const hasCheckedInToday = userData.lastCheckinDate === today;
+    const checkinBtn = document.getElementById('checkin-btn');
+    
+    if (checkinBtn) {
+        if (hasCheckedInToday) {
+            checkinBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Đã Điểm Danh Hôm Nay';
+            checkinBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            checkinBtn.disabled = true;
+        } else {
+            checkinBtn.innerHTML = '<i class="fas fa-calendar-check mr-2"></i> Điểm Danh Hàng Ngày';
+            checkinBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            checkinBtn.disabled = false;
+        }
+    }
 
     // Update activities
     const allActivities = defaultHealthyActivities.concat(userData.customActivities || []);
@@ -584,6 +639,10 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = 'index.html';
     });
     
+    document.getElementById('back-to-main-after-quiz')?.addEventListener('click', () => {
+        window.location.href = 'index.html';
+    });
+    
     // Main page event listeners
     document.getElementById('set-limit-btn')?.addEventListener('click', async () => {
         const newLimit = parseInt(document.getElementById('limit-input').value, 10);
@@ -624,6 +683,32 @@ document.addEventListener('DOMContentLoaded', function() {
             awardBadge('custom_activity');
             updateMainUI();
         }
+    });
+
+    // Check-in button event listener
+    document.getElementById('checkin-btn')?.addEventListener('click', async () => {
+        const today = new Date().toISOString().slice(0, 10);
+        const lastCheckinDate = userData.lastCheckinDate;
+        
+        // Check if already checked in today
+        if (lastCheckinDate === today) {
+            showNotification("Đã Điểm Danh", "Bạn đã điểm danh hôm nay rồi!");
+            return;
+        }
+        
+        // Update check-in streak
+        const isSequential = (lastCheckinDate && (new Date(today) - new Date(lastCheckinDate)) / (1000 * 60 * 60 * 24) === 1);
+        userData.checkinStreak = isSequential ? (userData.checkinStreak || 0) + 1 : 1;
+        userData.lastCheckinDate = today;
+        
+        // Award badges based on streak
+        if (userData.checkinStreak >= 5) awardBadge('checkin_streak_5');
+        if (userData.checkinStreak >= 10) awardBadge('checkin_streak_10');
+        if (userData.checkinStreak >= 20) awardBadge('checkin_streak_20');
+        
+        saveData();
+        showNotification("Điểm Danh Thành Công!", `Bạn đã điểm danh ${userData.checkinStreak} ngày liên tiếp!`);
+        updateMainUI();
     });
 
     document.addEventListener('click', async (e) => {
