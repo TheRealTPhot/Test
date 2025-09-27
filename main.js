@@ -145,8 +145,10 @@ function initApp() {
         
         updateMainUI();
         
-        // Khởi tạo giao diện lịch sử
-        updateActivityHistory('day');
+        // Khởi tạo giao diện lịch sử nếu có phần tử
+        if (document.getElementById('history-container')) {
+            updateActivityHistory('day');
+        }
     }
     
     if (document.getElementById('quiz-content')) {
@@ -204,66 +206,97 @@ function checkDailyReset() {
 
 // Update Main Page UI
 function updateMainUI() {
-    // Update dashboard
-    const totalUsageToday = userData.weeklyData[todayIndex] || 0;
-    document.getElementById('current-usage-display').textContent = `${totalUsageToday}p`;
-    const limit = userData.limit || 60;
-    document.getElementById('limit-input').value = limit;
-    document.getElementById('limit-message').innerHTML = `Giới hạn: <strong>${limit}p</strong>`;
-
-    const percentage = Math.min((totalUsageToday / limit) * 100, 100);
-    document.getElementById('progress-bar').style.width = `${percentage}%`;
-
-    if (totalUsageToday >= limit) {
-        document.getElementById('limit-message').innerHTML = `<span class="font-bold text-red-300">Bạn đã vượt quá giới hạn!</span>`;
-    } else if (totalUsageToday > 0) {
-        document.getElementById('limit-message').innerHTML = `Còn lại: <strong>${Math.max(0, limit - totalUsageToday)}p</strong>`;
-    }
-
-    // Update app usage inputs
-    const allApps = socialApps.concat(userData.customApps || []);
-    document.getElementById('app-input-container').innerHTML = allApps.map(app => `
-        <div class="input-group">
-            <div class="app-icon" style="background-color: ${app.color || '#ccc'}">
-                <i class="${app.iconClass || 'fa-solid fa-plus'}"></i>
-            </div>
-            <input type="number" id="input-${app.id}" placeholder="${app.name} (phút)" value="${(userData.appUsage[app.id] && userData.appUsage[app.id][todayIndex]) || 0}" class="flex-grow rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-        </div>
-    `).join('');
-
-    // Update activities
-    const allActivities = defaultHealthyActivities.concat(userData.customActivities || []);
-    const todayGMT7 = getGMT7Date().toISOString().slice(0, 10);
-    
-    document.getElementById('healthy-activities-list').innerHTML = allActivities.map(activity => {
-        const isCompletedToday = userData.completedActivities[activity.id]?.includes(todayGMT7);
-        const streak = getActivityStreak(activity.id);
+    try {
+        // Update dashboard
+        const currentUsageDisplay = document.getElementById('current-usage-display');
+        const limitInput = document.getElementById('limit-input');
+        const limitMessage = document.getElementById('limit-message');
+        const progressBar = document.getElementById('progress-bar');
         
-        return `
-            <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-                <div>
-                    <p class="text-gray-700">${activity.name}</p>
-                    ${streak > 0 ? `<p class="text-xs text-indigo-600">Chuỗi: ${streak} ngày</p>` : ''}
-                </div>
-                <button id="activity-${activity.id}" data-id="${activity.id}" class="complete-activity-btn px-4 py-1 rounded-full text-sm font-semibold transition duration-300
-                    ${isCompletedToday ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-indigo-200 text-indigo-700 hover:bg-indigo-300'}">
-                    ${isCompletedToday ? 'Đã Hoàn Thành Hôm Nay' : 'Hoàn Thành'}
-                </button>
-            </div>
-        `;
-    }).join('');
+        if (currentUsageDisplay) {
+            const totalUsageToday = userData.weeklyData[todayIndex] || 0;
+            currentUsageDisplay.textContent = `${totalUsageToday}p`;
+        }
+        
+        if (limitInput) {
+            const limit = userData.limit || 60;
+            limitInput.value = limit;
+        }
+        
+        if (limitMessage) {
+            const limit = userData.limit || 60;
+            limitMessage.innerHTML = `Giới hạn: <strong>${limit}p</strong>`;
+            
+            const totalUsageToday = userData.weeklyData[todayIndex] || 0;
+            const percentage = Math.min((totalUsageToday / limit) * 100, 100);
+            
+            if (progressBar) {
+                progressBar.style.width = `${percentage}%`;
+            }
+            
+            if (totalUsageToday >= limit) {
+                limitMessage.innerHTML = `<span class="font-bold text-red-300">Bạn đã vượt quá giới hạn!</span>`;
+            } else if (totalUsageToday > 0) {
+                limitMessage.innerHTML = `Còn lại: <strong>${Math.max(0, limit - totalUsageToday)}p</strong>`;
+            }
+        }
 
-    // Update badges
-    document.getElementById('badges-grid').innerHTML = allBadges.map(badge => `
-        <div class="flex flex-col items-center space-y-2 p-3 rounded-xl bg-white shadow-sm transition-all transform hover:scale-105">
-            <span class="text-4xl ${userData.badges[badge.id] ? 'badge-earned' : 'badge-icon'}">${badge.icon}</span>
-            <p class="font-semibold text-center text-sm">${badge.name}</p>
-            <p class="text-xs text-center text-gray-500">${badge.description}</p>
-        </div>
-    `).join('');
-   
-    // Update charts
-    updateCharts();
+        // Update app usage inputs
+        const appInputContainer = document.getElementById('app-input-container');
+        if (appInputContainer) {
+            const allApps = socialApps.concat(userData.customApps || []);
+            appInputContainer.innerHTML = allApps.map(app => `
+                <div class="input-group">
+                    <div class="app-icon" style="background-color: ${app.color || '#ccc'}">
+                        <i class="${app.iconClass || 'fa-solid fa-plus'}"></i>
+                    </div>
+                    <input type="number" id="input-${app.id}" placeholder="${app.name} (phút)" value="${(userData.appUsage[app.id] && userData.appUsage[app.id][todayIndex]) || 0}" class="flex-grow rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+            `).join('');
+        }
+
+        // Update activities
+        const healthyActivitiesList = document.getElementById('healthy-activities-list');
+        if (healthyActivitiesList) {
+            const allActivities = defaultHealthyActivities.concat(userData.customActivities || []);
+            const todayGMT7 = getGMT7Date().toISOString().slice(0, 10);
+            
+            healthyActivitiesList.innerHTML = allActivities.map(activity => {
+                const isCompletedToday = userData.completedActivities[activity.id]?.includes(todayGMT7);
+                const streak = getActivityStreak(activity.id);
+                
+                return `
+                    <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <div>
+                            <p class="text-gray-700">${activity.name}</p>
+                            ${streak > 0 ? `<p class="text-xs text-indigo-600">Chuỗi: ${streak} ngày</p>` : ''}
+                        </div>
+                        <button id="activity-${activity.id}" data-id="${activity.id}" class="complete-activity-btn px-4 py-1 rounded-full text-sm font-semibold transition duration-300
+                            ${isCompletedToday ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-indigo-200 text-indigo-700 hover:bg-indigo-300'}">
+                            ${isCompletedToday ? 'Đã Hoàn Thành Hôm Nay' : 'Hoàn Thành'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update badges
+        const badgesGrid = document.getElementById('badges-grid');
+        if (badgesGrid) {
+            badgesGrid.innerHTML = allBadges.map(badge => `
+                <div class="flex flex-col items-center space-y-2 p-3 rounded-xl bg-white shadow-sm transition-all transform hover:scale-105">
+                    <span class="text-4xl ${userData.badges[badge.id] ? 'badge-earned' : 'badge-icon'}">${badge.icon}</span>
+                    <p class="font-semibold text-center text-sm">${badge.name}</p>
+                    <p class="text-xs text-center text-gray-500">${badge.description}</p>
+                </div>
+            `).join('');
+        }
+       
+        // Update charts
+        updateCharts();
+    } catch (error) {
+        console.error("Error in updateMainUI:", error);
+    }
 }
 
 // Update Survey Page UI
@@ -273,122 +306,140 @@ function updateSurveyUI() {
 
 // Update Charts
 function updateCharts() {
-    const appLabels = socialApps.map(app => app.name);
-    const appColors = socialApps.map(app => app.color);
-    const appData = socialApps.map(app => (userData.appUsage[app.id] || Array(7).fill(0)));
+    try {
+        const appUsageChartCanvas = document.getElementById('app-usage-chart');
+        const weeklyUsageChartCanvas = document.getElementById('weekly-usage-chart');
+        
+        if (appUsageChartCanvas) {
+            const appLabels = socialApps.map(app => app.name);
+            const appColors = socialApps.map(app => app.color);
+            const appData = socialApps.map(app => (userData.appUsage[app.id] || Array(7).fill(0)));
 
-    const datasets = appData.map((data, index) => ({
-        label: appLabels[index],
-        data: data,
-        borderColor: appColors[index],
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        fill: false,
-        tension: 0.4,
-        pointRadius: 5
-    }));
+            const datasets = appData.map((data, index) => ({
+                label: appLabels[index],
+                data: data,
+                borderColor: appColors[index],
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 5
+            }));
 
-    // Line chart for individual app usage
-    if (window.appUsageChart) window.appUsageChart.destroy();
-    window.appUsageChart = new Chart(document.getElementById('app-usage-chart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'CN', 'T7'].sort(),
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index', intersect: false }
-            },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
-
-    // Bar chart for total weekly usage
-    if (window.weeklyUsageChart) window.weeklyUsageChart.destroy();
-    const limitData = Array(7).fill(userData.limit || 60);
-    window.weeklyUsageChart = new Chart(document.getElementById('weekly-usage-chart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'CN', 'T7'].sort(),
-            datasets: [
-                {
-                    label: 'Thời gian sử dụng',
-                    data: userData.weeklyData,
-                    backgroundColor: '#6366f1',
+            // Line chart for individual app usage
+            if (window.appUsageChart) window.appUsageChart.destroy();
+            window.appUsageChart = new Chart(appUsageChartCanvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'CN', 'T7'].sort(),
+                    datasets: datasets
                 },
-                {
-                    label: 'Giới hạn',
-                    data: limitData,
-                    type: 'line',
-                    borderColor: '#ef4444',
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.1,
-                    pointRadius: 0
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: { y: { beginAtZero: true } }
                 }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index', intersect: false }
-            },
-            scales: {
-                y: { beginAtZero: true },
-                x: { stacked: false }
-            }
+            });
         }
-    });
-   
-    // Quiz history chart
-    if (document.getElementById('quiz-history-chart')) {
-        if (window.quizHistoryChart) window.quizHistoryChart.destroy();
-        const historyLabels = userData.quizHistory.map((entry, index) => `Lần ${index + 1}`);
-        const physicalData = userData.quizHistory.map(entry => entry.scores.physical);
-        const mentalData = userData.quizHistory.map(entry => entry.scores.mental);
-        const concentrationData = userData.quizHistory.map(entry => entry.scores.concentration);
 
-        window.quizHistoryChart = new Chart(document.getElementById('quiz-history-chart').getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: historyLabels,
-                datasets: [
-                    { label: 'Thể chất', data: physicalData, borderColor: '#4c51bf', fill: false, tension: 0.4 },
-                    { label: 'Tinh thần', data: mentalData, borderColor: '#6b46c1', fill: false, tension: 0.4 },
-                    { label: 'Tập trung', data: concentrationData, borderColor: '#f56565', fill: false, tension: 0.4 }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: { y: { beginAtZero: true, suggestedMax: 25 } }
-            }
-        });
+        // Bar chart for total weekly usage
+        if (weeklyUsageChartCanvas) {
+            if (window.weeklyUsageChart) window.weeklyUsageChart.destroy();
+            const limitData = Array(7).fill(userData.limit || 60);
+            window.weeklyUsageChart = new Chart(weeklyUsageChartCanvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'CN', 'T7'].sort(),
+                    datasets: [
+                        {
+                            label: 'Thời gian sử dụng',
+                            data: userData.weeklyData,
+                            backgroundColor: '#6366f1',
+                        },
+                        {
+                            label: 'Giới hạn',
+                            data: limitData,
+                            type: 'line',
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true },
+                        x: { stacked: false }
+                    }
+                }
+            });
+        }
+       
+        // Quiz history chart
+        const quizHistoryChartCanvas = document.getElementById('quiz-history-chart');
+        if (quizHistoryChartCanvas) {
+            if (window.quizHistoryChart) window.quizHistoryChart.destroy();
+            const historyLabels = userData.quizHistory.map((entry, index) => `Lần ${index + 1}`);
+            const physicalData = userData.quizHistory.map(entry => entry.scores.physical);
+            const mentalData = userData.quizHistory.map(entry => entry.scores.mental);
+            const concentrationData = userData.quizHistory.map(entry => entry.scores.concentration);
+
+            window.quizHistoryChart = new Chart(quizHistoryChartCanvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: historyLabels,
+                    datasets: [
+                        { label: 'Thể chất', data: physicalData, borderColor: '#4c51bf', fill: false, tension: 0.4 },
+                        { label: 'Tinh thần', data: mentalData, borderColor: '#6b46c1', fill: false, tension: 0.4 },
+                        { label: 'Tập trung', data: concentrationData, borderColor: '#f56565', fill: false, tension: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, suggestedMax: 25 } }
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error in updateCharts:", error);
     }
 }
 
 // Show notification
 function showNotification(title, message) {
-    const notification = document.createElement('div');
-    notification.className = 'notification-card bg-white p-4 rounded-xl shadow-lg flex items-center space-x-3 w-full max-w-sm';
-    notification.innerHTML = `
-        <div class="flex-shrink-0">
-            <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856a2 2 0 001.912-2.316L17.726 5.86a2 2 0 00-1.912-1.684H8.186a2 2 0 00-1.912 1.684L4.02 17.684A2 2 0 006.012 20h11.976z" />
-            </svg>
-        </div>
-        <div>
-            <div class="font-bold text-gray-900">${title}</div>
-            <div class="text-sm text-gray-600">${message}</div>
-        </div>
-    `;
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
+    try {
+        const notification = document.createElement('div');
+        notification.className = 'notification-card bg-white p-4 rounded-xl shadow-lg flex items-center space-x-3 w-full max-w-sm';
+        notification.innerHTML = `
+            <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856a2 2 0 001.912-2.316L17.726 5.86a2 2 0 00-1.912-1.684H8.186a2 2 0 00-1.912 1.684L4.02 17.684A2 2 0 006.012 20h11.976z" />
+                </svg>
+            </div>
+            <div>
+                <div class="font-bold text-gray-900">${title}</div>
+                <div class="text-sm text-gray-600">${message}</div>
+            </div>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    } catch (error) {
+        console.error("Error in showNotification:", error);
+    }
 }
 
 // Award badge
@@ -448,54 +499,81 @@ function formatTime(seconds) {
 }
 
 function playBellSound() {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
 
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 440; // A4
-    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1);
-    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 440; // A4
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + 1);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 1);
+    } catch (error) {
+        console.error("Error in playBellSound:", error);
+    }
 }
 
 function startTimer() {
     pomodoro.isRunning = true;
-    document.getElementById('start-pause-btn').textContent = 'Tạm Dừng';
-    document.getElementById('start-pause-btn').classList.remove('bg-green-500', 'hover:bg-green-600');
-    document.getElementById('start-pause-btn').classList.add('bg-yellow-500', 'hover:bg-yellow-600');
-    document.getElementById('reset-btn').classList.remove('hidden');
+    const startPauseBtn = document.getElementById('start-pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const timerStatus = document.getElementById('timer-status');
+    
+    if (startPauseBtn) {
+        startPauseBtn.textContent = 'Tạm Dừng';
+        startPauseBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+        startPauseBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+    }
+    
+    if (resetBtn) {
+        resetBtn.classList.remove('hidden');
+    }
 
     pomodoro.intervalId = setInterval(() => {
         pomodoro.timeRemaining--;
-        document.getElementById('timer-display').textContent = formatTime(pomodoro.timeRemaining);
+        const timerDisplay = document.getElementById('timer-display');
+        if (timerDisplay) {
+            timerDisplay.textContent = formatTime(pomodoro.timeRemaining);
+        }
 
         if (pomodoro.timeRemaining <= 0) {
             playBellSound();
             if (pomodoro.isWorkTime) {
                 pomodoro.isWorkTime = false;
                 pomodoro.timeRemaining = pomodoro.breakDuration;
-                document.getElementById('timer-status').textContent = 'Giờ nghỉ!';
+                if (timerStatus) {
+                    timerStatus.textContent = 'Giờ nghỉ!';
+                }
             } else {
                 pomodoro.isWorkTime = true;
                 pomodoro.timeRemaining = pomodoro.workDuration;
-                document.getElementById('timer-status').textContent = 'Bắt đầu một chu kỳ mới!';
+                if (timerStatus) {
+                    timerStatus.textContent = 'Bắt đầu một chu kỳ mới!';
+                }
             }
-            document.getElementById('timer-display').textContent = formatTime(pomodoro.timeRemaining);
+            if (timerDisplay) {
+                timerDisplay.textContent = formatTime(pomodoro.timeRemaining);
+            }
         }
     }, 1000);
 }
 
 function pauseTimer() {
     pomodoro.isRunning = false;
-    document.getElementById('start-pause-btn').textContent = 'Tiếp Tục';
-    document.getElementById('start-pause-btn').classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-    document.getElementById('start-pause-btn').classList.add('bg-green-500', 'hover:bg-green-600');
+    const startPauseBtn = document.getElementById('start-pause-btn');
+    
+    if (startPauseBtn) {
+        startPauseBtn.textContent = 'Tiếp Tục';
+        startPauseBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+        startPauseBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+    }
+    
     clearInterval(pomodoro.intervalId);
 }
 
@@ -503,12 +581,29 @@ function resetTimer() {
     pauseTimer();
     pomodoro.isWorkTime = true;
     pomodoro.timeRemaining = pomodoro.workDuration;
-    document.getElementById('timer-display').textContent = formatTime(pomodoro.workDuration);
-    document.getElementById('timer-status').textContent = 'Sẵn sàng bắt đầu!';
-    document.getElementById('start-pause-btn').textContent = 'Bắt Đầu';
-    document.getElementById('start-pause-btn').classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-    document.getElementById('start-pause-btn').classList.add('bg-green-500', 'hover:bg-green-600');
-    document.getElementById('reset-btn').classList.add('hidden');
+    
+    const timerDisplay = document.getElementById('timer-display');
+    const timerStatus = document.getElementById('timer-status');
+    const startPauseBtn = document.getElementById('start-pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    
+    if (timerDisplay) {
+        timerDisplay.textContent = formatTime(pomodoro.workDuration);
+    }
+    
+    if (timerStatus) {
+        timerStatus.textContent = 'Sẵn sàng bắt đầu!';
+    }
+    
+    if (startPauseBtn) {
+        startPauseBtn.textContent = 'Bắt Đầu';
+        startPauseBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+        startPauseBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+    }
+    
+    if (resetBtn) {
+        resetBtn.classList.add('hidden');
+    }
 }
 
 // Thêm hàm lấy chuỗi ngày của hoạt động
@@ -563,100 +658,118 @@ function updateStreaks(activityId, today) {
 
 // Thêm hàm cập nhật giao diện lịch sử hoạt động
 function updateActivityHistory(viewType = 'day') {
-    const container = document.getElementById('history-container');
-    const nowGMT7 = getGMT7Date();
-    const todayGMT7 = nowGMT7.toISOString().slice(0, 10);
-    
-    // Cập nhật trạng thái nút
-    document.getElementById('view-day-btn').className = viewType === 'day' ? 
-        'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
-        'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
-    document.getElementById('view-week-btn').className = viewType === 'week' ? 
-        'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
-        'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
-    document.getElementById('view-month-btn').className = viewType === 'month' ? 
-        'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
-        'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
-    
-    if (viewType === 'day') {
-        // Hiển thị lịch sử theo ngày
-        const todayActivities = userData.activityHistory[todayGMT7] || {};
-        const allActivities = [...defaultHealthyActivities, ...(userData.customActivities || [])];
+    try {
+        const container = document.getElementById('history-container');
+        if (!container) return;
         
-        container.innerHTML = `
-            <div class="mb-4">
-                <h4 class="font-semibold text-lg">Hoạt động hôm nay (${todayGMT7})</h4>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                ${allActivities.map(activity => `
-                    <div class="flex items-center p-3 bg-white rounded-lg shadow-sm">
-                        <div class="flex-1">
-                            <p class="text-gray-700">${activity.name}</p>
-                        </div>
-                        <div class="w-6 h-6 rounded-full ${todayActivities[activity.id] ? 'bg-green-500' : 'bg-gray-300'} flex items-center justify-center">
-                            ${todayActivities[activity.id] ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    } else if (viewType === 'week') {
-        // Hiển thị lịch sử theo tuần
-        const weekSummary = getWeekSummary();
+        const nowGMT7 = getGMT7Date();
+        const todayGMT7 = nowGMT7.toISOString().slice(0, 10);
         
-        container.innerHTML = `
-            <div class="mb-4">
-                <h4 class="font-semibold text-lg">Tóm tắt tuần này</h4>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white rounded-lg overflow-hidden">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="py-2 px-4 text-left">Hoạt động</th>
-                            ${weekSummary.days.map(day => `<th class="py-2 px-4 text-center">${day}</th>`).join('')}
-                            <th class="py-2 px-4 text-center">Tổng</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${weekSummary.activities.map(activity => `
-                            <tr class="border-b">
-                                <td class="py-2 px-4">${activity.name}</td>
-                                ${activity.completion.map(completed => 
-                                    `<td class="py-2 px-4 text-center">
-                                        ${completed ? '<i class="fas fa-check text-green-500"></i>' : '-'}
-                                    </td>`
-                                ).join('')}
-                                <td class="py-2 px-4 text-center font-semibold">${activity.total}</td>
+        // Cập nhật trạng thái nút
+        const viewDayBtn = document.getElementById('view-day-btn');
+        const viewWeekBtn = document.getElementById('view-week-btn');
+        const viewMonthBtn = document.getElementById('view-month-btn');
+        
+        if (viewDayBtn) {
+            viewDayBtn.className = viewType === 'day' ? 
+                'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
+                'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
+        }
+        
+        if (viewWeekBtn) {
+            viewWeekBtn.className = viewType === 'week' ? 
+                'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
+                'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
+        }
+        
+        if (viewMonthBtn) {
+            viewMonthBtn.className = viewType === 'month' ? 
+                'px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium' : 
+                'px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium';
+        }
+        
+        if (viewType === 'day') {
+            // Hiển thị lịch sử theo ngày
+            const todayActivities = userData.activityHistory[todayGMT7] || {};
+            const allActivities = [...defaultHealthyActivities, ...(userData.customActivities || [])];
+            
+            container.innerHTML = `
+                <div class="mb-4">
+                    <h4 class="font-semibold text-lg">Hoạt động hôm nay (${todayGMT7})</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${allActivities.map(activity => `
+                        <div class="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                            <div class="flex-1">
+                                <p class="text-gray-700">${activity.name}</p>
+                            </div>
+                            <div class="w-6 h-6 rounded-full ${todayActivities[activity.id] ? 'bg-green-500' : 'bg-gray-300'} flex items-center justify-center">
+                                ${todayActivities[activity.id] ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else if (viewType === 'week') {
+            // Hiển thị lịch sử theo tuần
+            const weekSummary = getWeekSummary();
+            
+            container.innerHTML = `
+                <div class="mb-4">
+                    <h4 class="font-semibold text-lg">Tóm tắt tuần này</h4>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-2 px-4 text-left">Hoạt động</th>
+                                ${weekSummary.days.map(day => `<th class="py-2 px-4 text-center">${day}</th>`).join('')}
+                                <th class="py-2 px-4 text-center">Tổng</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    } else if (viewType === 'month') {
-        // Hiển thị lịch sử theo tháng
-        const monthSummary = getMonthSummary();
-        
-        container.innerHTML = `
-            <div class="mb-4">
-                <h4 class="font-semibold text-lg">Tóm tắt tháng này</h4>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                ${monthSummary.map(week => `
-                    <div class="bg-white p-4 rounded-lg shadow-sm">
-                        <h5 class="font-semibold mb-2">Tuần ${week.weekNumber}</h5>
-                        <div class="space-y-2">
-                            ${week.activities.map(activity => `
-                                <div class="flex justify-between">
-                                    <span class="text-sm">${activity.name}</span>
-                                    <span class="text-sm font-semibold">${activity.count} lần</span>
-                                </div>
+                        </thead>
+                        <tbody>
+                            ${weekSummary.activities.map(activity => `
+                                <tr class="border-b">
+                                    <td class="py-2 px-4">${activity.name}</td>
+                                    ${activity.completion.map(completed => 
+                                        `<td class="py-2 px-4 text-center">
+                                            ${completed ? '<i class="fas fa-check text-green-500"></i>' : '-'}
+                                        </td>`
+                                    ).join('')}
+                                    <td class="py-2 px-4 text-center font-semibold">${activity.total}</td>
+                                </tr>
                             `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (viewType === 'month') {
+            // Hiển thị lịch sử theo tháng
+            const monthSummary = getMonthSummary();
+            
+            container.innerHTML = `
+                <div class="mb-4">
+                    <h4 class="font-semibold text-lg">Tóm tắt tháng này</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${monthSummary.map(week => `
+                        <div class="bg-white p-4 rounded-lg shadow-sm">
+                            <h5 class="font-semibold mb-2">Tuần ${week.weekNumber}</h5>
+                            <div class="space-y-2">
+                                ${week.activities.map(activity => `
+                                    <div class="flex justify-between">
+                                        <span class="text-sm">${activity.name}</span>
+                                        <span class="text-sm font-semibold">${activity.count} lần</span>
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+                    `).join('')}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error("Error in updateActivityHistory:", error);
     }
 }
 
@@ -774,249 +887,346 @@ function getMonthSummary() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize localStorage
-    initLocalStorage();
-    
-    // Initialize app
-    initApp();
-    
-    // Navigation buttons
-    document.getElementById('go-to-survey-btn')?.addEventListener('click', () => {
-        window.location.href = 'survey.html';
-    });
-    
-    document.getElementById('back-to-main-btn')?.addEventListener('click', () => {
-        window.location.href = 'index.html';
-    });
-    
-    document.getElementById('back-to-main-after-quiz')?.addEventListener('click', () => {
-        window.location.href = 'index.html';
-    });
-    
-    // History view buttons
-    document.getElementById('view-day-btn')?.addEventListener('click', () => {
-        updateActivityHistory('day');
-    });
-    
-    document.getElementById('view-week-btn')?.addEventListener('click', () => {
-        updateActivityHistory('week');
-    });
-    
-    document.getElementById('view-month-btn')?.addEventListener('click', () => {
-        updateActivityHistory('month');
-    });
-    
-    // Main page event listeners
-    document.getElementById('set-limit-btn')?.addEventListener('click', async () => {
-        const newLimit = parseInt(document.getElementById('limit-input').value, 10);
-        if (!isNaN(newLimit) && newLimit > 0) {
-            userData.limit = newLimit;
-            saveData();
-            showNotification("Giới hạn đã được đặt", `Giới hạn hàng ngày của bạn đã được đặt là ${newLimit} phút.`);
-            updateMainUI();
+    try {
+        // Initialize localStorage
+        initLocalStorage();
+        
+        // Initialize app
+        initApp();
+        
+        // Navigation buttons
+        const goToSurveyBtn = document.getElementById('go-to-survey-btn');
+        if (goToSurveyBtn) {
+            goToSurveyBtn.addEventListener('click', () => {
+                window.location.href = 'survey.html';
+            });
         }
-    });
-
-    document.getElementById('submit-usage-btn')?.addEventListener('click', async () => {
-        let totalUsage = 0;
-        socialApps.forEach(app => {
-            const input = document.getElementById(`input-${app.id}`);
-            const value = parseInt(input.value, 10) || 0;
-            if (!userData.appUsage[app.id]) userData.appUsage[app.id] = Array(7).fill(0);
-            userData.appUsage[app.id][todayIndex] = value;
-            totalUsage += value;
-        });
-
-        userData.weeklyData[todayIndex] = totalUsage;
-        saveData();
-        showNotification("Cập nhật thành công", `Tổng thời gian sử dụng hôm nay là ${totalUsage} phút.`);
-        updateMainUI();
-    });
-
-    document.getElementById('add-activity-btn')?.addEventListener('click', async () => {
-        const newActivityName = document.getElementById('new-activity-input').value.trim();
-        if (newActivityName) {
-            const newActivityId = newActivityName.replace(/\s+/g, '_').toLowerCase();
-            const newActivity = { id: newActivityId, name: newActivityName };
-            userData.customActivities = userData.customActivities || [];
-            userData.customActivities.push(newActivity);
-            saveData();
-            document.getElementById('new-activity-input').value = '';
-            showNotification("Hoạt động mới", "Bạn đã thêm một hoạt động lành mạnh mới!");
-            awardBadge('custom_activity');
-            updateMainUI();
+        
+        const backToMainBtn = document.getElementById('back-to-main-btn');
+        if (backToMainBtn) {
+            backToMainBtn.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
         }
-    });
-
-    document.addEventListener('click', async (e) => {
-        if (e.target.matches('.complete-activity-btn')) {
-            const activityId = e.target.dataset.id;
-            const activityName = defaultHealthyActivities.find(a => a.id === activityId)?.name || 
-                                userData.customActivities.find(a => a.id === activityId)?.name;
-            
-            const todayGMT7 = getGMT7Date().toISOString().slice(0, 10);
-            
-            // Kiểm tra nếu hoạt động đã được hoàn thành hôm nay chưa
-            const completedToday = userData.completedActivities[activityId]?.includes(todayGMT7);
-            
-            if (!completedToday) {
-                // Thêm ngày hoàn thành vào mảng
-                if (!userData.completedActivities[activityId]) {
-                    userData.completedActivities[activityId] = [];
-                }
-                userData.completedActivities[activityId].push(todayGMT7);
-                
-                // Cập nhật lịch sử hoạt động theo ngày
-                if (!userData.activityHistory[todayGMT7]) {
-                    userData.activityHistory[todayGMT7] = {};
-                }
-                userData.activityHistory[todayGMT7][activityId] = true;
-                
-                awardBadge('first_activity');
-                
-                // Cập nhật chuỗi ngày
-                updateStreaks(activityId, todayGMT7);
-                
-                // Kiểm tra nếu tất cả hoạt động đã được hoàn thành hôm nay
-                const allActivitiesCompleted = [...defaultHealthyActivities, ...(userData.customActivities || [])]
-                    .every(activity => userData.completedActivities[activity.id]?.includes(todayGMT7));
-                if (allActivitiesCompleted) {
-                    awardBadge('all_activities');
-                }
-                
-                saveData();
-                updateMainUI();
+        
+        const backToMainAfterQuizBtn = document.getElementById('back-to-main-after-quiz');
+        if (backToMainAfterQuizBtn) {
+            backToMainAfterQuizBtn.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        }
+        
+        // History view buttons
+        const viewDayBtn = document.getElementById('view-day-btn');
+        if (viewDayBtn) {
+            viewDayBtn.addEventListener('click', () => {
                 updateActivityHistory('day');
-            }
+            });
         }
-    });
-
-    // Pomodoro Timer
-    document.getElementById('start-pause-btn')?.addEventListener('click', () => {
-        if (pomodoro.timeRemaining <= 0) {
-            pomodoro.timeRemaining = pomodoro.workDuration;
-            document.getElementById('timer-status').textContent = 'Giờ làm việc!';
+        
+        const viewWeekBtn = document.getElementById('view-week-btn');
+        if (viewWeekBtn) {
+            viewWeekBtn.addEventListener('click', () => {
+                updateActivityHistory('week');
+            });
         }
-        if (pomodoro.isRunning) {
-            pauseTimer();
-        } else {
-            startTimer();
+        
+        const viewMonthBtn = document.getElementById('view-month-btn');
+        if (viewMonthBtn) {
+            viewMonthBtn.addEventListener('click', () => {
+                updateActivityHistory('month');
+            });
         }
-    });
+        
+        // Main page event listeners
+        const setLimitBtn = document.getElementById('set-limit-btn');
+        if (setLimitBtn) {
+            setLimitBtn.addEventListener('click', async () => {
+                const limitInput = document.getElementById('limit-input');
+                if (limitInput) {
+                    const newLimit = parseInt(limitInput.value, 10);
+                    if (!isNaN(newLimit) && newLimit > 0) {
+                        userData.limit = newLimit;
+                        saveData();
+                        showNotification("Giới hạn đã được đặt", `Giới hạn hàng ngày của bạn đã được đặt là ${newLimit} phút.`);
+                        updateMainUI();
+                    }
+                }
+            });
+        }
 
-    document.getElementById('reset-btn')?.addEventListener('click', resetTimer);
+        const submitUsageBtn = document.getElementById('submit-usage-btn');
+        if (submitUsageBtn) {
+            submitUsageBtn.addEventListener('click', async () => {
+                let totalUsage = 0;
+                socialApps.forEach(app => {
+                    const input = document.getElementById(`input-${app.id}`);
+                    if (input) {
+                        const value = parseInt(input.value, 10) || 0;
+                        if (!userData.appUsage[app.id]) userData.appUsage[app.id] = Array(7).fill(0);
+                        userData.appUsage[app.id][todayIndex] = value;
+                        totalUsage += value;
+                    }
+                });
 
-    // Survey page event listeners
-    document.getElementById('start-quiz-btn')?.addEventListener('click', () => {
-        const generateQuiz = (containerId, questions) => {
-            const container = document.getElementById(containerId);
-            container.innerHTML = questions.map((q, index) => `
-                <div class="quiz-question" data-category="${containerId}" data-index="${index}">
-                    <p class="font-medium">${index + 1}. ${q.q}</p>
-                    <div class="flex flex-wrap gap-2 mt-2">
-                        ${quizOptions.map((option, optIndex) => `
-                            <button data-score="${q.score[optIndex]}" class="quiz-option bg-white text-gray-700 px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100 transition duration-300">
-                                ${option}
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
-            container.classList.remove('hidden');
-        };
+                userData.weeklyData[todayIndex] = totalUsage;
+                saveData();
+                showNotification("Cập nhật thành công", `Tổng thời gian sử dụng hôm nay là ${totalUsage} phút.`);
+                updateMainUI();
+            });
+        }
 
-        generateQuiz('physical-questions', quizQuestions.physical);
-        generateQuiz('mental-questions', quizQuestions.mental);
-        generateQuiz('concentration-questions', quizQuestions.concentration);
+        const addActivityBtn = document.getElementById('add-activity-btn');
+        if (addActivityBtn) {
+            addActivityBtn.addEventListener('click', async () => {
+                const newActivityInput = document.getElementById('new-activity-input');
+                if (newActivityInput) {
+                    const newActivityName = newActivityInput.value.trim();
+                    if (newActivityName) {
+                        const newActivityId = newActivityName.replace(/\s+/g, '_').toLowerCase();
+                        const newActivity = { id: newActivityId, name: newActivityName };
+                        userData.customActivities = userData.customActivities || [];
+                        userData.customActivities.push(newActivity);
+                        saveData();
+                        if (newActivityInput) {
+                            newActivityInput.value = '';
+                        }
+                        showNotification("Hoạt động mới", "Bạn đã thêm một hoạt động lành mạnh mới!");
+                        awardBadge('custom_activity');
+                        updateMainUI();
+                    }
+                }
+            });
+        }
 
-        document.getElementById('start-quiz-btn').classList.add('hidden');
-        document.getElementById('submit-quiz-btn').classList.remove('hidden');
-        document.getElementById('quiz-status').textContent = 'Hãy trả lời tất cả các câu hỏi để xem kết quả.';
-    });
-
-    document.getElementById('submit-quiz-btn')?.addEventListener('click', async () => {
-        const allQuestions = document.querySelectorAll('.quiz-question');
-        let answeredCount = 0;
-        let scores = { physical: 0, mental: 0, concentration: 0 };
-
-        allQuestions.forEach(q => {
-            const selected = q.querySelector('.quiz-option.bg-indigo-500');
-            if (selected) {
-                const category = q.dataset.category.replace('-questions', '');
-                scores[category] += parseInt(selected.dataset.score, 10);
-                answeredCount++;
+        // Event delegation for activity buttons
+        document.addEventListener('click', async (e) => {
+            if (e.target.matches('.complete-activity-btn')) {
+                const activityId = e.target.dataset.id;
+                const activityName = defaultHealthyActivities.find(a => a.id === activityId)?.name || 
+                                    userData.customActivities.find(a => a.id === activityId)?.name;
+                
+                const todayGMT7 = getGMT7Date().toISOString().slice(0, 10);
+                
+                // Kiểm tra nếu hoạt động đã được hoàn thành hôm nay chưa
+                const completedToday = userData.completedActivities[activityId]?.includes(todayGMT7);
+                
+                if (!completedToday) {
+                    // Thêm ngày hoàn thành vào mảng
+                    if (!userData.completedActivities[activityId]) {
+                        userData.completedActivities[activityId] = [];
+                    }
+                    userData.completedActivities[activityId].push(todayGMT7);
+                    
+                    // Cập nhật lịch sử hoạt động theo ngày
+                    if (!userData.activityHistory[todayGMT7]) {
+                        userData.activityHistory[todayGMT7] = {};
+                    }
+                    userData.activityHistory[todayGMT7][activityId] = true;
+                    
+                    awardBadge('first_activity');
+                    
+                    // Cập nhật chuỗi ngày
+                    updateStreaks(activityId, todayGMT7);
+                    
+                    // Kiểm tra nếu tất cả hoạt động đã được hoàn thành hôm nay
+                    const allActivitiesCompleted = [...defaultHealthyActivities, ...(userData.customActivities || [])]
+                        .every(activity => userData.completedActivities[activity.id]?.includes(todayGMT7));
+                    if (allActivitiesCompleted) {
+                        awardBadge('all_activities');
+                    }
+                    
+                    saveData();
+                    updateMainUI();
+                    updateActivityHistory('day');
+                }
             }
         });
 
-        if (answeredCount === allQuestions.length) {
-            const evaluation = getQuizResultEvaluation(scores);
-           
-            document.getElementById('quiz-evaluation').innerHTML = evaluation.evaluationDetails;
-            document.getElementById('dependency-score').textContent = ``;
-
-            const today = new Date().toISOString().slice(0, 10);
-            userData.quizHistory.push({ date: today, scores: scores });
-            
-            // Lưu dữ liệu trước khi cập nhật giao diện
-            saveData();
-
-            document.getElementById('quiz-result-section').classList.remove('hidden');
-            document.getElementById('quiz-status').classList.add('hidden');
-            document.getElementById('submit-quiz-btn').classList.add('hidden');
-            
-            // Cấp thành tựu
-            awardBadge('quiz_pro');
-           
-            const dependencyPercentage = ((scores.physical * 0.4) + (scores.mental * 0.4) + (scores.concentration * 0.2)) / 5 * 20;
-            if (dependencyPercentage < 50) awardBadge('dependency_low_50');
-            if (dependencyPercentage < 40) awardBadge('dependency_low_40');
-            if (dependencyPercentage < 30) awardBadge('dependency_low_30');
-
-            // Cập nhật biểu đồ
-            if (window.quizChart) window.quizChart.destroy();
-            window.quizChart = new Chart(document.getElementById('quiz-chart').getContext('2d'), {
-                type: 'radar',
-                data: {
-                    labels: ['Thể chất', 'Tinh thần', 'Tập trung'],
-                    datasets: [{
-                        label: 'Điểm của bạn (càng cao càng tốt)',
-                        data: [scores.physical, scores.mental, scores.concentration],
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                        borderColor: '#6366f1',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#6366f1'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    elements: { line: { borderWidth: 3 } },
-                    scales: { r: { suggestedMin: 0, suggestedMax: 25, pointLabels: { font: { size: 14 } } } }
+        // Pomodoro Timer
+        const startPauseBtn = document.getElementById('start-pause-btn');
+        if (startPauseBtn) {
+            startPauseBtn.addEventListener('click', () => {
+                if (pomodoro.timeRemaining <= 0) {
+                    pomodoro.timeRemaining = pomodoro.workDuration;
+                    const timerStatus = document.getElementById('timer-status');
+                    if (timerStatus) {
+                        timerStatus.textContent = 'Giờ làm việc!';
+                    }
+                }
+                if (pomodoro.isRunning) {
+                    pauseTimer();
+                } else {
+                    startTimer();
                 }
             });
-           
-            updateCharts();
-            
-            // Hiển thị thông báo thành công
-            showNotification("Khảo sát hoàn thành", "Kết quả khảo sát của bạn đã được lưu. Hãy quay lại trang chính để xem thành tựu mới!");
-        } else {
-            document.getElementById('quiz-status').textContent = 'Vui lòng trả lời tất cả các câu hỏi.';
         }
-    });
 
-    document.getElementById('quiz-content')?.addEventListener('click', (e) => {
-        if (e.target.matches('.quiz-option')) {
-            const parent = e.target.closest('.quiz-question');
-            parent.querySelectorAll('.quiz-option').forEach(btn => {
-                btn.classList.remove('bg-indigo-500', 'text-white');
-                btn.classList.add('bg-white', 'text-gray-700');
+        const resetBtn = document.getElementById('reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', resetTimer);
+        }
+
+        // Survey page event listeners
+        const startQuizBtn = document.getElementById('start-quiz-btn');
+        if (startQuizBtn) {
+            startQuizBtn.addEventListener('click', () => {
+                const generateQuiz = (containerId, questions) => {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        container.innerHTML = questions.map((q, index) => `
+                            <div class="quiz-question" data-category="${containerId}" data-index="${index}">
+                                <p class="font-medium">${index + 1}. ${q.q}</p>
+                                <div class="flex flex-wrap gap-2 mt-2">
+                                    ${quizOptions.map((option, optIndex) => `
+                                        <button data-score="${q.score[optIndex]}" class="quiz-option bg-white text-gray-700 px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100 transition duration-300">
+                                            ${option}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('');
+                        container.classList.remove('hidden');
+                    }
+                };
+
+                generateQuiz('physical-questions', quizQuestions.physical);
+                generateQuiz('mental-questions', quizQuestions.mental);
+                generateQuiz('concentration-questions', quizQuestions.concentration);
+
+                if (startQuizBtn) {
+                    startQuizBtn.classList.add('hidden');
+                }
+                
+                const submitQuizBtn = document.getElementById('submit-quiz-btn');
+                if (submitQuizBtn) {
+                    submitQuizBtn.classList.remove('hidden');
+                }
+                
+                const quizStatus = document.getElementById('quiz-status');
+                if (quizStatus) {
+                    quizStatus.textContent = 'Hãy trả lời tất cả các câu hỏi để xem kết quả.';
+                }
             });
-            e.target.classList.add('bg-indigo-500', 'text-white');
-            e.target.classList.remove('bg-white', 'text-gray-700');
         }
-    });
 
-    // Initialize badges on first visit
-    if (Object.keys(userData.badges).length === 0) {
-        awardBadge('first_day');
+        const submitQuizBtn = document.getElementById('submit-quiz-btn');
+        if (submitQuizBtn) {
+            submitQuizBtn.addEventListener('click', async () => {
+                const allQuestions = document.querySelectorAll('.quiz-question');
+                let answeredCount = 0;
+                let scores = { physical: 0, mental: 0, concentration: 0 };
+
+                allQuestions.forEach(q => {
+                    const selected = q.querySelector('.quiz-option.bg-indigo-500');
+                    if (selected) {
+                        const category = q.dataset.category.replace('-questions', '');
+                        scores[category] += parseInt(selected.dataset.score, 10);
+                        answeredCount++;
+                    }
+                });
+
+                if (answeredCount === allQuestions.length) {
+                    const evaluation = getQuizResultEvaluation(scores);
+                   
+                    const quizEvaluation = document.getElementById('quiz-evaluation');
+                    if (quizEvaluation) {
+                        quizEvaluation.innerHTML = evaluation.evaluationDetails;
+                    }
+                    
+                    const dependencyScore = document.getElementById('dependency-score');
+                    if (dependencyScore) {
+                        dependencyScore.textContent = ``;
+                    }
+
+                    const today = new Date().toISOString().slice(0, 10);
+                    userData.quizHistory.push({ date: today, scores: scores });
+                    
+                    // Lưu dữ liệu trước khi cập nhật giao diện
+                    saveData();
+
+                    const quizResultSection = document.getElementById('quiz-result-section');
+                    if (quizResultSection) {
+                        quizResultSection.classList.remove('hidden');
+                    }
+                    
+                    const quizStatus = document.getElementById('quiz-status');
+                    if (quizStatus) {
+                        quizStatus.classList.add('hidden');
+                    }
+                    
+                    if (submitQuizBtn) {
+                        submitQuizBtn.classList.add('hidden');
+                    }
+                    
+                    // Cấp thành tựu
+                    awardBadge('quiz_pro');
+                   
+                    const dependencyPercentage = ((scores.physical * 0.4) + (scores.mental * 0.4) + (scores.concentration * 0.2)) / 5 * 20;
+                    if (dependencyPercentage < 50) awardBadge('dependency_low_50');
+                    if (dependencyPercentage < 40) awardBadge('dependency_low_40');
+                    if (dependencyPercentage < 30) awardBadge('dependency_low_30');
+
+                    // Cập nhật biểu đồ
+                    const quizChartCanvas = document.getElementById('quiz-chart');
+                    if (quizChartCanvas) {
+                        if (window.quizChart) window.quizChart.destroy();
+                        window.quizChart = new Chart(quizChartCanvas.getContext('2d'), {
+                            type: 'radar',
+                            data: {
+                                labels: ['Thể chất', 'Tinh thần', 'Tập trung'],
+                                datasets: [{
+                                    label: 'Điểm của bạn (càng cao càng tốt)',
+                                    data: [scores.physical, scores.mental, scores.concentration],
+                                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                    borderColor: '#6366f1',
+                                    borderWidth: 2,
+                                    pointBackgroundColor: '#6366f1'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                elements: { line: { borderWidth: 3 } },
+                                scales: { r: { suggestedMin: 0, suggestedMax: 25, pointLabels: { font: { size: 14 } } } }
+                            }
+                        });
+                    }
+                   
+                    updateCharts();
+                    
+                    // Hiển thị thông báo thành công
+                    showNotification("Khảo sát hoàn thành", "Kết quả khảo sát của bạn đã được lưu. Hãy quay lại trang chính để xem thành tựu mới!");
+                } else {
+                    const quizStatus = document.getElementById('quiz-status');
+                    if (quizStatus) {
+                        quizStatus.textContent = 'Vui lòng trả lời tất cả các câu hỏi.';
+                    }
+                }
+            });
+        }
+
+        const quizContent = document.getElementById('quiz-content');
+        if (quizContent) {
+            quizContent.addEventListener('click', (e) => {
+                if (e.target.matches('.quiz-option')) {
+                    const parent = e.target.closest('.quiz-question');
+                    if (parent) {
+                        parent.querySelectorAll('.quiz-option').forEach(btn => {
+                            btn.classList.remove('bg-indigo-500', 'text-white');
+                            btn.classList.add('bg-white', 'text-gray-700');
+                        });
+                        e.target.classList.add('bg-indigo-500', 'text-white');
+                        e.target.classList.remove('bg-white', 'text-gray-700');
+                    }
+                }
+            });
+        }
+
+        // Initialize badges on first visit
+        if (Object.keys(userData.badges).length === 0) {
+            awardBadge('first_day');
+        }
+    } catch (error) {
+        console.error("Error in DOMContentLoaded:", error);
     }
 });
