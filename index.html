@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sống Cân Bằng</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -66,6 +66,14 @@
             color: white;
             font-size: 1.25rem;
         }
+        .countdown-timer {
+            background-color: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+        }
+        .activity-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -83,6 +91,17 @@
             <h1 class="text-4xl font-bold text-center mb-2 text-indigo-800">Sống Cân Bằng</h1>
             <p class="text-center text-gray-500 mb-6">Chào mừng bạn trở lại, bạn đang trên con đường xây dựng thói quen tốt!</p>
             <p class="text-center text-xs text-gray-400 mb-6">ID Người Dùng: <span id="user-id-display" class="font-mono"></span></p>
+
+            <!-- Countdown Timer Section -->
+            <div id="countdown-section" class="countdown-timer rounded-xl p-4 mb-6 shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-blue-800">Đếm ngược đến reset hoạt động</p>
+                        <p class="text-xs text-blue-600">Hoạt động lành mạnh sẽ được reset lúc 6:00 sáng</p>
+                    </div>
+                    <div class="text-2xl font-bold text-blue-800" id="countdown-timer">00:00:00</div>
+                </div>
+            </div>
 
             <!-- Usage Dashboard Section -->
             <div class="gradient-bg text-white rounded-xl p-6 shadow-lg mb-8">
@@ -158,25 +177,28 @@
             </div>
 
             <!-- Activity History Section -->
-            <div class="bg-gray-50 rounded-xl p-6 shadow-md mb-8">
-                <div class="flex justify-between items-center mb-4">
+            <div class="bg-gray-50 rounded-xl p-6 mb-8 shadow-md">
+                <div class="flex items-center justify-between mb-4">
                     <h3 class="text-2xl font-semibold text-indigo-800">Lịch Sử Hoạt Động</h3>
                     <div class="flex space-x-2">
-                        <button id="view-day-btn" class="px-3 py-1 bg-indigo-500 text-white rounded-lg text-sm font-medium">Ngày</button>
-                        <button id="view-week-btn" class="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium">Tuần</button>
-                        <button id="view-month-btn" class="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium">Tháng</button>
+                        <button id="prev-day-btn" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-300 transition duration-300">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span id="history-date-display" class="font-medium text-gray-700"></span>
+                        <button id="next-day-btn" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-300 transition duration-300">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
-                
-                <div id="history-container" class="space-y-4">
-                    <!-- History content will be populated here -->
+                <div id="activity-history-container" class="activity-history">
+                    <!-- Activity history will be populated here -->
                 </div>
             </div>
 
             <!-- Survey Button -->
             <div class="text-center mb-8">
                 <button id="go-to-survey-btn" class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold shadow-lg hover:bg-indigo-700 transition duration-300">
-                    <i class="fas fa-clipboard-list mr-2"></i> Khảo Sá Sức Khỏe
+                    <i class="fas fa-clipboard-list mr-2"></i> Khảo Sát Sức Khỏe
                 </button>
             </div>
 
